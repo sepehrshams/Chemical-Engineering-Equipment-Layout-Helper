@@ -35,14 +35,17 @@ It evaluates 2D/3D plant plot plans (extracted from CAD/DXF or coordinate spread
 
 ---
 
-## ⚙️ Core Architecture & Features
-
-* **3D/2D Euclidean Distance Physics:** Calculates true edge-to-edge separation distances:
-  $$D_{\text{edge}} = \max\left(0, \sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2 + (z_1 - z_2)^2} - (r_1 + r_2)\right)$$
-* **Automated CSV/CAD Data Pipeline:** Directly imports coordinates extracted from AutoCAD, PDMS, or SmartPlant.
+* **Dynamic Separation Scaling (IPS-E-PR-190 Section 5 & NFPA 30):**
+  * **Tank-to-Tank spacing:** $\max\left(15\text{m},\, \frac{D_1 + D_2}{3}\right)$
+  * **LPG Sphere spacing:** $\max\left(15\text{m},\, 0.75 \times D_{\text{larger}}\right)$
+  * **Tank to Fired Heater:** $\max\left(60\text{m},\, 1.2 \times D_{\text{tank}}\right)$
+  * **Tank to Site Boundary Fence:** $\max\left(90\text{m},\, 1.5 \times D_{\text{tank}}\right)$
+  * **Flare Exclusion Footprint:** Scaled dynamically to flare thermal rating (API 521 & TotalEnergies).
+* **Commercial Market Catalog:** Equipment dimensions are selected from standardized market ratings (API 650 crude tanks 5k to 500k bbl, ASME VIII LPG Hortonspheres 500 to 5000 m³, API 560 cabin/box furnaces, API 521 flare tips).
+* **Full-Screen CAD Blueprint Grid:** Zero-void responsive blueprint grid filling 100% of any display aspect ratio with 1:1 physical meter scaling, along with a one-click toggle for static printed CAD foundations (`📐 Printed CAD Overlay: ON/OFF`).
+* **Automated CSV/CAD Data Pipeline:** Directly imports coordinates extracted from AutoCAD, PDMS, or SmartPlant 3D.
 * **Atmospheric Wind Drift Vector:** Detects if prevailing wind carries volatile fuel/LPG leaks toward continuous burner flames (`T4_FIRED_HEATER` or `T9_FLARE`).
-* **Interactive Web GUI (HTML5 Canvas):** Zero-install, browser-based visualizer with drag-and-drop units, CAD blueprint background overlay, and real-time gap analysis.
-* **Non-Compliance Reporting (NCR):** Categorizes severity (`CRITICAL`, `HIGH`, `WARNING`) with deficit metrics and standard clause citations.
+* **Printable Official Audit Report (PDF / Print):** Formally generates an executive engineering audit summary with NCR status, deficiency breakdown, and signoff blocks.
 
 ---
 
