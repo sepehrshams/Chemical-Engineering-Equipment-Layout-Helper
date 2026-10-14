@@ -41,6 +41,82 @@ class UnitCategory(Enum):
     LOADING_RACK = "T10_LOADING_RACK"             # سکوهای بارگیری و تخلیه
     FENCE = "PROPERTY_FENCE"                      # فنس محیطی سایت
 
+# Standard Commercial Sizes available in market according to API / ASME / IPS-E-PR-190
+COMMERCIAL_CATALOG: Dict[UnitCategory, List[Dict[str, Any]]] = {
+    UnitCategory.STORAGE_ATM_CRUDE_LARGE: [
+        {"name": "API 650 - 150,000 bbl (Ø 48m, H 16m)", "radius": 24.0, "diameter": 48.0},
+        {"name": "API 650 - 250,000 bbl (Ø 62m, H 18m)", "radius": 31.0, "diameter": 62.0},
+        {"name": "API 650 - 500,000 bbl (Ø 85m, H 22m)", "radius": 42.5, "diameter": 85.0},
+    ],
+    UnitCategory.STORAGE_ATM_CRUDE_MED: [
+        {"name": "API 650 - 50,000 bbl (Ø 28m, H 14m)", "radius": 14.0, "diameter": 28.0},
+        {"name": "API 650 - 80,000 bbl (Ø 35m, H 14m)", "radius": 17.5, "diameter": 35.0},
+        {"name": "API 650 - 100,000 bbl (Ø 40m, H 14m)", "radius": 20.0, "diameter": 40.0},
+    ],
+    UnitCategory.STORAGE_ATM_CRUDE_SMALL: [
+        {"name": "API 650 - 5,000 bbl (Ø 9m, H 12m)", "radius": 4.5, "diameter": 9.0},
+        {"name": "API 650 - 10,000 bbl (Ø 13m, H 12m)", "radius": 6.5, "diameter": 13.0},
+        {"name": "API 650 - 20,000 bbl (Ø 18m, H 12m)", "radius": 9.0, "diameter": 18.0},
+    ],
+    UnitCategory.STORAGE_LPG_ABOVE: [
+        {"name": "ASME VIII - 1,000 m³ Sphere (Ø 12.4m)", "radius": 6.2, "diameter": 12.4},
+        {"name": "ASME VIII - 2,500 m³ Sphere (Ø 16.8m)", "radius": 8.4, "diameter": 16.8},
+        {"name": "ASME VIII - 5,000 m³ Sphere (Ø 21.2m)", "radius": 10.6, "diameter": 21.2},
+        {"name": "ASME VIII - 8,000 m³ Sphere (Ø 24.8m)", "radius": 12.4, "diameter": 24.8},
+    ],
+    UnitCategory.STORAGE_LPG_MOUNDED: [
+        {"name": "3 Bullets Bank (Ø 4m x L 30m, 1,000 m³)", "radius": 9.0, "diameter": 18.0},
+        {"name": "4 Bullets Bank (Ø 5m x L 45m, 3,200 m³)", "radius": 13.0, "diameter": 26.0},
+        {"name": "6 Bullets Bank (Ø 6m x L 60m, 8,000 m³)", "radius": 18.0, "diameter": 36.0},
+    ],
+    UnitCategory.FIRED_HEATERS: [
+        {"name": "Cylindrical Vertical Heater (15 MW)", "radius": 5.0, "diameter": 10.0},
+        {"name": "Single-Cell Box Cabin Heater (40 MW)", "radius": 8.0, "diameter": 16.0},
+        {"name": "Double-Cell Cracking Furnace (90 MW)", "radius": 12.0, "diameter": 24.0},
+        {"name": "Multi-Cell Steam Methane Reformer (180 MW)", "radius": 16.0, "diameter": 32.0},
+    ],
+    UnitCategory.FLARE_STACK: [
+        {"name": "12\" Tip - Low Relief (30 MW, Rad Base 75m)", "radius": 4.0, "flare_rating": 30.0},
+        {"name": "24\" Tip - Standard Relief (90 MW, Rad Base 110m)", "radius": 6.0, "flare_rating": 90.0},
+        {"name": "36\" Tip - High Pressure (250 MW, Rad Base 150m)", "radius": 8.0, "flare_rating": 250.0},
+        {"name": "48\" Tip - Full Emergency Blowdown (600 MW, Rad Base 190m)", "radius": 11.0, "flare_rating": 600.0},
+    ],
+    UnitCategory.UNFIRED_PROCESS_HIGH_P: [
+        {"name": "Medium Fixed Bed Reactor (Ø 3.2m x H 14m)", "radius": 5.0, "diameter": 3.2},
+        {"name": "Heavy Wall Hydrocracker (Ø 4.8m x H 25m)", "radius": 8.0, "diameter": 4.8},
+        {"name": "CCR Platforming Regeneration Train", "radius": 11.0, "diameter": 8.0},
+        {"name": "Fluid Catalytic Cracking (FCC) Reactor/Regen", "radius": 15.0, "diameter": 12.0},
+    ],
+    UnitCategory.UNFIRED_PROCESS_LOW_P: [
+        {"name": "Distillation Column Train (Ø 2.5m)", "radius": 4.0, "diameter": 2.5},
+        {"name": "Gas Sweetening & Amine Absorption Train", "radius": 7.0, "diameter": 4.5},
+        {"name": "Heavy Aromatics Fractionation Train", "radius": 10.0, "diameter": 7.0},
+    ],
+    UnitCategory.MACHINERY_POWER: [
+        {"name": "2-Stage Reciprocating Compressor Skid (1.5 MW)", "radius": 5.0, "diameter": 10.0},
+        {"name": "Centrifugal Gas Turbine Train (12 MW)", "radius": 8.0, "diameter": 16.0},
+        {"name": "Gas Reinjection Compressor Hall (35 MW)", "radius": 12.0, "diameter": 24.0},
+    ],
+    UnitCategory.CONTROL_ROOM: [
+        {"name": "Local Field Auxiliary Room (FAR - 10m x 15m)", "radius": 6.0, "diameter": 15.0},
+        {"name": "Blast-Resistant CCR - Single Story (20m x 30m)", "radius": 9.0, "diameter": 25.0},
+        {"name": "Integrated Control & Emergency Command Hub (35m x 50m)", "radius": 14.0, "diameter": 40.0},
+    ],
+    UnitCategory.FIRE_WATER_STATION: [
+        {"name": "Standard 2-Pump Skids (2x 2,500 gpm)", "radius": 6.0, "diameter": 12.0},
+        {"name": "Major Terminal Fire Pump Station (4x 4,000 gpm)", "radius": 10.0, "diameter": 20.0},
+    ],
+    UnitCategory.LOADING_RACK: [
+        {"name": "2-Bay Road Tanker Gantry", "radius": 6.0, "diameter": 12.0},
+        {"name": "4-Bay Heavy Fuel Loading Island", "radius": 9.0, "diameter": 18.0},
+        {"name": "8-Bay Multi-Product Rail & Truck Gantry", "radius": 14.0, "diameter": 28.0},
+    ],
+    UnitCategory.WELLHEAD_ERUPTIVE: [
+        {"name": "Single High-Pressure Wellhead (10,000 psi)", "radius": 6.0, "diameter": 12.0},
+        {"name": "Cluster Multi-Well Pad (4 Wells)", "radius": 10.0, "diameter": 20.0},
+    ],
+}
+
 # Category Metadata for Display, Visualization and Physics
 CATEGORY_META: Dict[UnitCategory, Dict[str, Any]] = {
     UnitCategory.WELLHEAD_ERUPTIVE: {"name_en": "Eruptive Wellhead", "name_fa": "چاه فورانی نفت/گاز", "color": "#dc2626", "radius": 8.0, "is_fuel": True, "is_ignition": False},
@@ -68,7 +144,7 @@ CATEGORY_META: Dict[UnitCategory, Dict[str, Any]] = {
     UnitCategory.FENCE: {"name_en": "Site Boundary Fence", "name_fa": "فنس محیطی سایت", "color": "#64748b", "radius": 4.0, "is_fuel": False, "is_ignition": False},
 }
 
-# ماتریس فواصل پیش‌فرض بین نواحی حریق (Fire Zone Separation Matrix - IPS-G-SF-150 / INSO 23591)
+# ماتریس فواصل پایه بین نواحی حریق (Base Separation Matrix - IPS-G-SF-150 / INSO 23591)
 FIRE_ZONE_SEPARATION_IPS_G_SF_150: Dict[Tuple[UnitCategory, UnitCategory], float] = {
     # چاه فورانی با سایر تجهیزات
     (UnitCategory.WELLHEAD_ERUPTIVE, UnitCategory.BUILDINGS_ADMIN): 200.0,
@@ -181,6 +257,7 @@ class EquipmentNode:
     is_fuel_source: bool = False
     flash_point: Optional[float] = None # بر حسب درجه سانتیگراد
     radius: float = 6.0
+    commercial_size_label: str = ""
     notes: str = ""
 
     def __post_init__(self):
@@ -192,20 +269,9 @@ class EquipmentNode:
         if self.radius == 6.0 and "radius" in meta:
             self.radius = meta["radius"]
 
-    def to_dict(self) -> dict:
-        return {
-            "tag": self.tag,
-            "category": self.category.value,
-            "category_name": self.category.name,
-            "x": self.coord_x,
-            "y": self.coord_y,
-            "z": self.elevation_z,
-            "radius": self.radius,
-            "is_ignition_source": self.is_ignition_source,
-            "is_fuel_source": self.is_fuel_source,
-            "flash_point": self.flash_point,
-            "notes": self.notes
-        }
+    @property
+    def diameter(self) -> float:
+        return self.radius * 2.0
 
 @dataclass
 class NonComplianceRecord:
@@ -229,6 +295,7 @@ class WindIgnitionHazard:
 class AntiGravityLayoutVerifier:
     """
     Industrial Plot Plan & Facility Siting Rules Engine
+    Calculates dynamic separation distances based on Equipment Dimensions (Diameter & Rating)
     Fully compliant with IPS-G-SF-150 / INSO 23591 (2023), IPS-E-PR-190, TotalEnergies GS-GR-HSE-301
     """
     def __init__(self, prevailing_wind_deg: float = 45.0):
@@ -242,12 +309,64 @@ class AntiGravityLayoutVerifier:
         self.nodes.clear()
 
     def calculate_distance(self, n1: EquipmentNode, n2: EquipmentNode) -> float:
-        # 3D Euclidean distance (or 2D if Z is 0)
         return math.sqrt((n1.coord_x - n2.coord_x)**2 + (n1.coord_y - n2.coord_y)**2 + (n1.elevation_z - n2.elevation_z)**2)
 
     def calculate_edge_distance(self, n1: EquipmentNode, n2: EquipmentNode) -> float:
         center_dist = self.calculate_distance(n1, n2)
         return max(0.0, center_dist - (n1.radius + n2.radius))
+
+    def calculate_required_separation(self, n1: EquipmentNode, n2: EquipmentNode) -> Optional[Tuple[float, str]]:
+        """
+        Calculates dynamic separation distance based on IPS-E-PR-190 & IPS-G-SF-150 formulas:
+        Takes into account equipment diameter D, tank capacity, and flare exclusion footprint.
+        """
+        c1, c2 = n1.category, n2.category
+        base_rule = FIRE_ZONE_SEPARATION_IPS_G_SF_150.get((c1, c2)) or \
+                    FIRE_ZONE_SEPARATION_IPS_G_SF_150.get((c2, c1))
+
+        # Check for Tank-to-Tank spacing (IPS-E-PR-190 Section 5 & NFPA 30)
+        tank_cats = [UnitCategory.STORAGE_ATM_CRUDE_SMALL, UnitCategory.STORAGE_ATM_CRUDE_MED, UnitCategory.STORAGE_ATM_CRUDE_LARGE]
+        if c1 in tank_cats and c2 in tank_cats:
+            # Distance between floating/cone roof tanks is a function of (D1 + D2)
+            d1, d2 = n1.diameter, n2.diameter
+            calc_dist = max(15.0, (d1 + d2) / 3.0)
+            return round(calc_dist, 1), f"IPS-E-PR-190 Table 2 & NFPA 30: Separation between adjacent crude tanks = (D1+D2)/3 = ({d1}m+{d2}m)/3."
+
+        # Spacing between LPG Spheres (IPS-E-PR-190 Section 5.3)
+        if c1 == UnitCategory.STORAGE_LPG_ABOVE and c2 == UnitCategory.STORAGE_LPG_ABOVE:
+            d_larger = max(n1.diameter, n2.diameter)
+            calc_dist = max(15.0, 0.75 * d_larger)
+            return round(calc_dist, 1), f"IPS-E-PR-190 Sec 5.3: Spacing between pressurized LPG spheres = 0.75 x D_larger ({d_larger}m)."
+
+        # Storage Tank to Fired Heater (Scale with Tank Diameter per IPS-E-PR-190)
+        if (c1 in tank_cats or c1 == UnitCategory.STORAGE_LPG_ABOVE) and c2 == UnitCategory.FIRED_HEATERS:
+            tank_d = n1.diameter
+            calc_dist = max(base_rule or 60.0, 1.2 * tank_d)
+            return round(calc_dist, 1), f"IPS-E-PR-190 & IPS-G-SF-150: Tank to Fired Heater separation scales with diameter = max(60m, 1.2*D_tank)."
+        if (c2 in tank_cats or c2 == UnitCategory.STORAGE_LPG_ABOVE) and c1 == UnitCategory.FIRED_HEATERS:
+            tank_d = n2.diameter
+            calc_dist = max(base_rule or 60.0, 1.2 * tank_d)
+            return round(calc_dist, 1), f"IPS-E-PR-190 & IPS-G-SF-150: Tank to Fired Heater separation scales with diameter = max(60m, 1.2*D_tank)."
+
+        # Storage Tank to Property Fence (1.5 x D per IPS-E-PR-190 & NFPA 30)
+        if c1 in tank_cats and c2 == UnitCategory.FENCE:
+            calc_dist = max(base_rule or 90.0, 1.5 * n1.diameter)
+            return round(calc_dist, 1), f"IPS-E-PR-190: Tank to site fence = max(base, 1.5*D) = {calc_dist}m."
+        if c2 in tank_cats and c1 == UnitCategory.FENCE:
+            calc_dist = max(base_rule or 90.0, 1.5 * n2.diameter)
+            return round(calc_dist, 1), f"IPS-E-PR-190: Tank to site fence = max(base, 1.5*D) = {calc_dist}m."
+
+        # Flare Exclusion Zone scaling with Flare tip rating / radius (API 521 / TotalEnergies / IPS-E-PR-190)
+        if c1 == UnitCategory.FLARE_STACK or c2 == UnitCategory.FLARE_STACK:
+            flare_node = n1 if c1 == UnitCategory.FLARE_STACK else n2
+            scale_factor = flare_node.radius / 6.0 # 6m is reference standard 90MW tip
+            flare_dist = max(base_rule or 100.0, (base_rule or 100.0) * scale_factor)
+            return round(flare_dist, 1), f"API 521 & TotalEnergies GS-GR-HSE-301: Ground radiation exclusion zone scaled to flare duty/radius ({flare_node.radius}m)."
+
+        if base_rule:
+            return base_rule, "IPS-G-SF-150 / INSO 23591 Fire Zone Separation Matrix."
+
+        return None
 
     def verify_fire_zones(self) -> List[NonComplianceRecord]:
         violations: List[NonComplianceRecord] = []
@@ -255,10 +374,10 @@ class AntiGravityLayoutVerifier:
         for i in range(n):
             for j in range(i + 1, n):
                 n1, n2 = self.nodes[i], self.nodes[j]
-                req_dist = FIRE_ZONE_SEPARATION_IPS_G_SF_150.get((n1.category, n2.category)) or \
-                           FIRE_ZONE_SEPARATION_IPS_G_SF_150.get((n2.category, n1.category))
+                rule_res = self.calculate_required_separation(n1, n2)
                 
-                if req_dist:
+                if rule_res:
+                    req_dist, rationale_rule = rule_res
                     edge_dist = self.calculate_edge_distance(n1, n2)
                     if edge_dist < req_dist:
                         deficit = req_dist - edge_dist
@@ -267,7 +386,7 @@ class AntiGravityLayoutVerifier:
                         
                         meta1 = CATEGORY_META.get(n1.category, {})
                         meta2 = CATEGORY_META.get(n2.category, {})
-                        rationale = f"Violation of mandatory fire separation between {meta1.get('name_en', n1.category.value)} and {meta2.get('name_en', n2.category.value)} as per IPS-G-SF-150 / INSO 23591."
+                        rationale = f"{rationale_rule} Actual edge-to-edge separation: {edge_dist:.1f}m."
                         
                         violations.append(NonComplianceRecord(
                             node1=n1,
@@ -276,16 +395,12 @@ class AntiGravityLayoutVerifier:
                             required_distance=req_dist,
                             deficit=round(deficit, 1),
                             severity=severity,
-                            standard="IPS-G-SF-150 / INSO 23591",
+                            standard="IPS-E-PR-190 / IPS-G-SF-150",
                             technical_rationale=rationale
                         ))
         return violations
 
     def verify_wind_orientation(self) -> List[WindIgnitionHazard]:
-        """
-        بررسی قرارگیری منابع اشتعال نسبت به منابع رهایش گاز بر اساس جهت باد غالب
-        (الزام اکید IPS-E-PR-190 و TotalEnergies GS-GR-HSE-301)
-        """
         hazards = []
         wind_rad = math.radians(self.wind_dir)
         wdx = math.cos(wind_rad)
@@ -301,24 +416,18 @@ class AntiGravityLayoutVerifier:
                         if dist == 0 or dist > 120.0:
                             continue
 
-                        # Dot product alignment with wind vector
                         align = (dx / dist) * wdx + (dy / dist) * wdy
-                        if align > 0.707: # Wind carries fuel directly to ignition source
+                        if align > 0.707:
                             hazards.append(WindIgnitionHazard(
                                 heater_node=n1,
                                 fuel_node=n2,
                                 distance=round(dist, 1),
                                 hazard_type="Gas Ingestion / Upwind Siting Breach",
-                                explanation=f"Ignition source {n1.tag} ({n1.category.value}) is situated downwind from fuel source {n2.tag} ({n2.category.value}). Distance: {dist:.1f}m. Mandatory upwind positioning breached per IPS-E-PR-190 / TotalEnergies GS-GR-HSE-301."
+                                explanation=f"Ignition source {n1.tag} ({n1.category.value}) is downwind from {n2.tag} ({n2.category.value}) at distance {dist:.1f}m. Violates IPS-E-PR-190."
                             ))
         return hazards
 
-    # --- CSV / Coordinates File Importer ---
     def import_from_csv(self, filepath: str) -> int:
-        """
-        Imports coordinates from a CSV file. Expected columns:
-        Tag, Category, X, Y, [Z], [Radius], [IsIgnition], [IsFuel], [FlashPoint]
-        """
         count = 0
         with open(filepath, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)

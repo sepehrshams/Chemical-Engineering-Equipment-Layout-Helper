@@ -176,10 +176,21 @@
             </button>
           </div>
 
+          <!-- Standard Market Catalog Size Selector (IPS-E-PR-190 & API 650/ASME VIII) -->
+          <div style="margin-bottom:8px;">
+            <div style="font-size:0.7rem; color:#94a3b8; margin-bottom:3px; display:flex; justify-content:space-between;">
+              <span><b>🏭 Market Catalog Standard Size:</b></span>
+              <span style="color:#a855f7; font-weight:700;">IPS-E-PR-190</span>
+            </div>
+            <select id="inspectCommercialSize" style="width:100%; background:#0b1120; border:1px solid #38bdf8; color:#38bdf8; font-size:0.72rem; padding:4px 6px; border-radius:4px; font-weight:700;" onchange="applyCommercialSize(this.value)">
+              <!-- Populated dynamically based on category -->
+            </select>
+          </div>
+
           <!-- Dimension (Radius / Diameter) Slider & Input -->
           <div style="margin-bottom:8px;">
             <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#94a3b8; margin-bottom:3px;">
-              <span><b>📐 Equipment Dimension (Radius / Footprint):</b></span>
+              <span><b>📐 Physical Footprint:</b></span>
               <span id="inspectRadiusBadge" style="color:#38bdf8; font-weight:700;">R: 10.0m (Ø 20.0m)</span>
             </div>
             <div class="slider-row">
@@ -380,9 +391,125 @@
       paletteGrid.appendChild(btn);
     }
 
-    function getIpsSeparation(c1, c2) {
-      if (IPS_MATRIX[c1 + '-' + c2]) return IPS_MATRIX[c1 + '-' + c2];
-      if (IPS_MATRIX[c2 + '-' + c1]) return IPS_MATRIX[c2 + '-' + c1];
+    // Commercial Market Sizes Catalog per API 650, ASME VIII, API 560, API 521, and IPS-E-PR-190
+    const COMMERCIAL_CATALOG = {
+      "T3_CRUDE_L": [
+        { name: "API 650 - 150,000 bbl (Ø 48m, H 16m)", radius: 24.0 },
+        { name: "API 650 - 250,000 bbl (Ø 62m, H 18m)", radius: 31.0 },
+        { name: "API 650 - 500,000 bbl (Ø 85m, H 22m)", radius: 42.5 }
+      ],
+      "T3_CRUDE_M": [
+        { name: "API 650 - 50,000 bbl (Ø 28m, H 14m)", radius: 14.0 },
+        { name: "API 650 - 80,000 bbl (Ø 35m, H 14m)", radius: 17.5 },
+        { name: "API 650 - 100,000 bbl (Ø 40m, H 14m)", radius: 20.0 }
+      ],
+      "T3_CRUDE_S": [
+        { name: "API 650 - 5,000 bbl (Ø 9m, H 12m)", radius: 4.5 },
+        { name: "API 650 - 10,000 bbl (Ø 13m, H 12m)", radius: 6.5 },
+        { name: "API 650 - 20,000 bbl (Ø 18m, H 12m)", radius: 9.0 }
+      ],
+      "T3_LPG_ABOVE": [
+        { name: "ASME VIII - 1,000 m³ Sphere (Ø 12.4m)", radius: 6.2 },
+        { name: "ASME VIII - 2,500 m³ Sphere (Ø 16.8m)", radius: 8.4 },
+        { name: "ASME VIII - 5,000 m³ Sphere (Ø 21.2m)", radius: 10.6 },
+        { name: "ASME VIII - 8,000 m³ Sphere (Ø 24.8m)", radius: 12.4 }
+      ],
+      "T3_LPG_MOUNDED": [
+        { name: "3 Bullets Bank (Ø 4m x L 30m, 1,000 m³)", radius: 9.0 },
+        { name: "4 Bullets Bank (Ø 5m x L 45m, 3,200 m³)", radius: 13.0 },
+        { name: "6 Bullets Bank (Ø 6m x L 60m, 8,000 m³)", radius: 18.0 }
+      ],
+      "T4_FIRED_HEATER": [
+        { name: "Cylindrical Vertical Heater (15 MW)", radius: 5.0 },
+        { name: "Single-Cell Cabin Heater (40 MW)", radius: 8.0 },
+        { name: "Double-Cell Cracking Furnace (90 MW)", radius: 12.0 },
+        { name: "Multi-Cell Steam Methane Reformer (180 MW)", radius: 16.0 }
+      ],
+      "T9_FLARE": [
+        { name: "12\" Tip - Low Relief (30 MW, Base Rad 75m)", radius: 4.0 },
+        { name: "24\" Tip - Standard Relief (90 MW, Base Rad 110m)", radius: 6.0 },
+        { name: "36\" Tip - High Pressure (250 MW, Base Rad 150m)", radius: 8.0 },
+        { name: "48\" Tip - Emergency Blowdown (600 MW, Base Rad 190m)", radius: 11.0 }
+      ],
+      "T2_HIGH_P": [
+        { name: "Medium Fixed Bed Reactor (Ø 3.2m x H 14m)", radius: 5.0 },
+        { name: "Heavy Wall Hydrocracker (Ø 4.8m x H 25m)", radius: 8.0 },
+        { name: "CCR Platforming Regeneration Train", radius: 11.0 },
+        { name: "Fluid Catalytic Cracking (FCC) Reactor", radius: 15.0 }
+      ],
+      "T5_POWER_GEN": [
+        { name: "Reciprocating Compressor Skid (1.5 MW)", radius: 5.0 },
+        { name: "Centrifugal Gas Turbine Train (12 MW)", radius: 8.0 },
+        { name: "Gas Reinjection Compressor Hall (35 MW)", radius: 12.0 }
+      ],
+      "T6_CONTROL_ROOM": [
+        { name: "Local Field Auxiliary Room (FAR - 10m x 15m)", radius: 6.0 },
+        { name: "Blast-Resistant CCR (20m x 30m)", radius: 9.0 },
+        { name: "Integrated Control & Emergency Hub (35m x 50m)", radius: 14.0 }
+      ],
+      "T7_FIRE_WATER": [
+        { name: "Standard 2-Pump Skid (2x 2,500 gpm)", radius: 6.0 },
+        { name: "Major Terminal Fire Pump Station (4x 4,000 gpm)", radius: 10.0 }
+      ],
+      "T10_LOADING_RACK": [
+        { name: "2-Bay Road Tanker Gantry", radius: 6.0 },
+        { name: "4-Bay Heavy Fuel Loading Island", radius: 9.0 },
+        { name: "8-Bay Multi-Product Rail & Truck Gantry", radius: 14.0 }
+      ],
+      "T1_ERUPTIVE": [
+        { name: "Single High-Pressure Wellhead (10,000 psi)", radius: 6.0 },
+        { name: "Cluster Multi-Well Pad (4 Wells)", radius: 10.0 }
+      ]
+    };
+
+    // Dynamic Separation Distance Formula (IPS-E-PR-190 Section 5 & IPS-G-SF-150)
+    function getIpsSeparation(u1, u2) {
+      const c1 = u1.category;
+      const c2 = u2.category;
+      const baseRule = IPS_MATRIX[c1 + '-' + c2] || IPS_MATRIX[c2 + '-' + c1];
+
+      const d1 = (u1.radius || 6) * 2;
+      const d2 = (u2.radius || 6) * 2;
+      const tankCats = ["T3_CRUDE_S", "T3_CRUDE_M", "T3_CRUDE_L"];
+
+      // 1. Tank-to-Tank spacing (IPS-E-PR-190 Table 2 & NFPA 30: (D1 + D2)/3)
+      if (tankCats.includes(c1) && tankCats.includes(c2)) {
+        return { req: Math.max(15, Math.round((d1 + d2) / 3)), ref: `IPS-E-PR-190 Sec 5: Tank-to-Tank spacing = (D1+D2)/3 = (${d1}m+${d2}m)/3` };
+      }
+
+      // 2. LPG Sphere-to-Sphere (IPS-E-PR-190 Sec 5.3: 0.75 * D_larger)
+      if (c1 === "T3_LPG_ABOVE" && c2 === "T3_LPG_ABOVE") {
+        const dLarger = Math.max(d1, d2);
+        return { req: Math.max(15, Math.round(0.75 * dLarger)), ref: `IPS-E-PR-190 Sec 5.3: LPG Sphere spacing = 0.75 x D_larger (${dLarger}m)` };
+      }
+
+      // 3. Tank to Fired Heater (Scales with Tank Diameter per IPS-E-PR-190: max(60m, 1.2 * D))
+      if ((tankCats.includes(c1) || c1 === "T3_LPG_ABOVE") && c2 === "T4_FIRED_HEATER") {
+        return { req: Math.max(baseRule || 60, Math.round(1.2 * d1)), ref: `IPS-E-PR-190 & IPS-G-SF-150: Tank to Heater scales with diameter = max(60m, 1.2*${d1}m)` };
+      }
+      if ((tankCats.includes(c2) || c2 === "T3_LPG_ABOVE") && c1 === "T4_FIRED_HEATER") {
+        return { req: Math.max(baseRule || 60, Math.round(1.2 * d2)), ref: `IPS-E-PR-190 & IPS-G-SF-150: Tank to Heater scales with diameter = max(60m, 1.2*${d2}m)` };
+      }
+
+      // 4. Tank to Property Fence (1.5 * D per IPS-E-PR-190 & NFPA 30)
+      if (tankCats.includes(c1) && c2 === "PROPERTY_FENCE") {
+        return { req: Math.max(baseRule || 90, Math.round(1.5 * d1)), ref: `IPS-E-PR-190: Tank to fence = max(90m, 1.5*${d1}m)` };
+      }
+      if (tankCats.includes(c2) && c1 === "PROPERTY_FENCE") {
+        return { req: Math.max(baseRule || 90, Math.round(1.5 * d2)), ref: `IPS-E-PR-190: Tank to fence = max(90m, 1.5*${d2}m)` };
+      }
+
+      // 5. Flare Ground Radiation footprint scaling (API 521 / TotalEnergies / IPS-E-PR-190)
+      if (c1 === "T9_FLARE" || c2 === "T9_FLARE") {
+        const flareNode = c1 === "T9_FLARE" ? u1 : u2;
+        const scaleFactor = (flareNode.radius || 6) / 6.0;
+        return { req: Math.round((baseRule || 100) * scaleFactor), ref: `API 521 & TotalEnergies: Ground radiation exclusion scaled to flare tip rating (R=${flareNode.radius}m)` };
+      }
+
+      if (baseRule) {
+        return { req: baseRule, ref: "IPS-G-SF-150 / INSO 23591 Fire Zone Separation Matrix" };
+      }
+
       return null;
     }
 
@@ -571,8 +698,10 @@
           const centerDist = Math.hypot(u1.x - u2.x, u1.y - u2.y);
           const edgeDist = Math.max(0, centerDist - (r1 + r2));
 
-          const reqDist = getIpsSeparation(u1.category, u2.category);
-          if (reqDist) {
+          const sepResult = getIpsSeparation(u1, u2);
+          if (sepResult && sepResult.req) {
+            const reqDist = sepResult.req;
+            const stdRef = sepResult.ref || "IPS-G-SF-150 / INSO 23591";
             if (edgeDist < reqDist) {
               const deficit = reqDist - edgeDist;
               const severity = (edgeDist / reqDist < 0.5) ? "CRITICAL" : (edgeDist / reqDist < 0.8 ? "HIGH" : "WARNING");
@@ -582,8 +711,8 @@
                 required: reqDist,
                 deficit: deficit.toFixed(1),
                 severity,
-                stdRef: "IPS-G-SF-150 / INSO 23591",
-                rationale: `Mandatory fire zone separation between ${u1.category} (${u1.tag}) and ${u2.category} (${u2.tag}) is breached. Required distance: ${reqDist}m.`
+                stdRef: stdRef,
+                rationale: `Separation between ${u1.category} (${u1.tag}) and ${u2.category} (${u2.tag}) is breached. Required distance: ${reqDist}m. Rule: ${stdRef}`
               });
             }
           }
@@ -880,12 +1009,44 @@
       document.getElementById('inspectName').textContent = `${u.tag} - ${meta.name}`;
       document.getElementById('inspectIndicator').style.background = meta.color;
 
+      // Populate Commercial Market Catalog Sizes
+      const sel = document.getElementById('inspectCommercialSize');
+      sel.innerHTML = '';
+      const list = COMMERCIAL_CATALOG[u.category] || [
+        { name: `Standard Skid Package (R=${curRadius}m)`, radius: curRadius }
+      ];
+      let matchedIdx = 0;
+      list.forEach((item, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `${item.name} [Ø ${(item.radius * 2).toFixed(1)}m]`;
+        if (Math.abs(item.radius - curRadius) < 0.2) {
+          matchedIdx = idx;
+        }
+        sel.appendChild(opt);
+      });
+      sel.selectedIndex = matchedIdx;
+
       document.getElementById('inspectRadiusSlider').value = curRadius;
       document.getElementById('inspectRadiusNum').value = curRadius;
       document.getElementById('inspectRadiusBadge').textContent = `R: ${curRadius.toFixed(1)}m (Ø ${(curRadius * 2).toFixed(1)}m)`;
 
       document.getElementById('inspectCoordX').value = Math.round(u.x);
       document.getElementById('inspectCoordY').value = Math.round(u.y);
+    }
+
+    function applyCommercialSize(val) {
+      if (!selectedUnit) return;
+      const list = COMMERCIAL_CATALOG[selectedUnit.category] || [];
+      const idx = parseInt(val);
+      if (list[idx]) {
+        const item = list[idx];
+        selectedUnit.radius = item.radius;
+        document.getElementById('inspectRadiusSlider').value = item.radius;
+        document.getElementById('inspectRadiusNum').value = item.radius;
+        document.getElementById('inspectRadiusBadge').textContent = `R: ${item.radius.toFixed(1)}m (Ø ${(item.radius * 2).toFixed(1)}m)`;
+        runAudit();
+      }
     }
 
     function updateSelectedRadius(val) {

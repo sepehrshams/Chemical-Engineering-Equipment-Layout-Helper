@@ -92,8 +92,36 @@ def test_suite():
         os.remove(temp_export)
     print("  --> PASSED: CSV export and re-import round-trip is 100% lossless.")
 
+    # TEST 8: Dynamic Equipment Dimensions & Market Catalog Sizing (IPS-E-PR-190)
+    print("\n[Test 8] Verifying Dynamic Separation Scaling per IPS-E-PR-190 & Market Catalog...")
+    from safety_standards import COMMERCIAL_CATALOG
+    assert len(COMMERCIAL_CATALOG) > 0, "Commercial catalog must have entries"
+    # 8a: Tank-to-Tank spacing (D1 + D2)/3
+    tank_a = EquipmentNode(tag="TK-A", category=UnitCategory.STORAGE_ATM_CRUDE_LARGE, coord_x=0, coord_y=0, radius=25.0) # D = 50m
+    tank_b = EquipmentNode(tag="TK-B", category=UnitCategory.STORAGE_ATM_CRUDE_LARGE, coord_x=100, coord_y=0, radius=20.0) # D = 40m
+    dist_req, rule_text = verifier.calculate_required_separation(tank_a, tank_b)
+    expected_dist = round((50.0 + 40.0) / 3.0, 1) # 30.0m
+    assert dist_req == expected_dist, f"Expected dynamic tank-to-tank spacing {expected_dist}m, got {dist_req}m"
+    assert "IPS-E-PR-190" in rule_text
+
+    # 8b: LPG Sphere spacing 0.75 * D
+    sphere_a = EquipmentNode(tag="SPH-1", category=UnitCategory.STORAGE_LPG_ABOVE, coord_x=0, coord_y=0, radius=12.0) # D = 24m
+    sphere_b = EquipmentNode(tag="SPH-2", category=UnitCategory.STORAGE_LPG_ABOVE, coord_x=50, coord_y=0, radius=10.0) # D = 20m
+    sphere_req, sphere_text = verifier.calculate_required_separation(sphere_a, sphere_b)
+    expected_sphere = round(0.75 * 24.0, 1) # 18.0m
+    assert sphere_req == expected_sphere, f"Expected LPG sphere spacing {expected_sphere}m, got {sphere_req}m"
+
+    # 8c: Tank to Fired Heater scaling max(60, 1.2 * D)
+    heater = EquipmentNode(tag="FH-1", category=UnitCategory.FIRED_HEATERS, coord_x=100, coord_y=100, radius=8.0)
+    tank_large = EquipmentNode(tag="TK-BIG", category=UnitCategory.STORAGE_ATM_CRUDE_LARGE, coord_x=0, coord_y=0, radius=35.0) # D = 70m
+    heater_req, _ = verifier.calculate_required_separation(tank_large, heater)
+    expected_heater = round(1.2 * 70.0, 1) # 84.0m (> 60m base)
+    assert heater_req == expected_heater, f"Expected scaled tank-to-heater distance {expected_heater}m, got {heater_req}m"
+
+    print("  --> PASSED: Dynamic IPS-E-PR-190 sizing rules scale 100% mathematically accurately.")
+
     print("\n" + "=" * 80)
-    print("[SUCCESS] ALL 7 SYSTEM TESTS PASSED (0 ERRORS, 100% ACCURACY)")
+    print("[SUCCESS] ALL 8 SYSTEM TESTS PASSED (0 ERRORS, 100% ACCURACY)")
     print("=" * 80)
 
 if __name__ == "__main__":
