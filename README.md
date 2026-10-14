@@ -1,4 +1,4 @@
-# ChemSafePlot 🏭🧪
+# Chemical Engineering Substitution for Plants 🏭🧪
 ### Industrial Facility Siting & Layout Rules Engine for Process Safety
 **Automated Plot Plan Verification & Gap Analysis according to Iranian Petroleum Standards (IPS) & International Safety Guidelines**
 
