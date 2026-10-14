@@ -658,7 +658,9 @@
 
     function updateScale(val) {
       mapDimension = parseInt(val);
-      document.getElementById('hudScale').textContent = `0 to ${mapDimension} Meters`;
+      const bounds = getPlotBounds();
+      document.getElementById('hudScale').textContent = `0 to ${bounds.mapDimX}m (W) × ${bounds.mapDimY}m (H)`;
+      drawPlot();
       runAudit();
     }
 
@@ -819,11 +821,27 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
-    function toScreen(x, y) {
+    function getPlotBounds() {
       const margin = 45;
-      const scaleX = (canvas.width - margin * 2) / mapDimension;
-      const scaleY = (canvas.height - margin * 2) / mapDimension;
-      const scale = Math.min(scaleX, scaleY);
+      const availW = Math.max(100, canvas.width - margin * 2);
+      const availH = Math.max(100, canvas.height - margin * 2);
+
+      // Isotropic 1:1 scale (1m X = 1m Y) across full canvas window
+      let scale, mapDimX, mapDimY;
+      if (availW >= availH) {
+        scale = availH / mapDimension;
+        mapDimY = mapDimension;
+        mapDimX = Math.round(availW / scale);
+      } else {
+        scale = availW / mapDimension;
+        mapDimX = mapDimension;
+        mapDimY = Math.round(availH / scale);
+      }
+      return { margin, availW, availH, scale, mapDimX, mapDimY };
+    }
+
+    function toScreen(x, y) {
+      const { margin, scale } = getPlotBounds();
       return {
         sx: margin + x * scale,
         sy: canvas.height - margin - y * scale,
@@ -832,10 +850,7 @@
     }
 
     function toWorld(sx, sy) {
-      const margin = 45;
-      const scaleX = (canvas.width - margin * 2) / mapDimension;
-      const scaleY = (canvas.height - margin * 2) / mapDimension;
-      const scale = Math.min(scaleX, scaleY);
+      const { margin, scale } = getPlotBounds();
       return {
         wx: (sx - margin) / scale,
         wy: (canvas.height - margin - sy) / scale
@@ -844,71 +859,92 @@
 
     function drawPlot() {
       if (!canvas.width || !canvas.height) return;
-      ctx.fillStyle = '#070d17';
+      const bounds = getPlotBounds();
+      const { margin, availW, availH, scale, mapDimX, mapDimY } = bounds;
+
+      // Update HUD coordinate bounds
+      const hudScaleEl = document.getElementById('hudScale');
+      if (hudScaleEl) {
+        hudScaleEl.textContent = `0 to ${mapDimX}m (W) × ${mapDimY}m (H)`;
+      }
+
+      // 1. Fill entire canvas pane with solid Deep Blueprint Dark Blue
+      ctx.fillStyle = '#030d1a';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const margin = 45;
       const p0 = toScreen(0, 0);
-      const pMax = toScreen(mapDimension, mapDimension);
+      const pMax = toScreen(mapDimX, mapDimY);
       const plotWidth = pMax.sx - p0.sx;
       const plotHeight = p0.sy - pMax.sy;
 
-      // 1. Fill entire usable equipment layout area with Deep CAD Blueprint Blue
-      ctx.fillStyle = '#05152b';
+      // 2. Fill active engineering layout area with Blueprint Navy
+      ctx.fillStyle = '#051833';
       ctx.fillRect(p0.sx, pMax.sy, plotWidth, plotHeight);
 
-      // 2. High-precision CAD Blue Engineering Grid (چهارخونه آبی مهندسی سراسری)
-      const minorStep = mapDimension >= 400 ? 20 : (mapDimension >= 250 ? 10 : 5);
-      const majorStep = mapDimension >= 400 ? 50 : (mapDimension >= 250 ? 25 : 20);
+      // 3. High-precision CAD Blue Engineering Grid covering 100% of the screen
+      const maxDim = Math.max(mapDimX, mapDimY);
+      const minorStep = maxDim >= 500 ? 25 : (maxDim >= 250 ? 10 : 5);
+      const majorStep = maxDim >= 500 ? 50 : (maxDim >= 250 ? 25 : 20);
 
-      // 2a. Minor Grid Lines (every 5m or 10m)
+      // 3a. Minor Grid Lines across full mapDimX and mapDimY
       ctx.strokeStyle = '#0e2d57';
       ctx.lineWidth = 0.7;
-      for (let i = 0; i <= mapDimension; i += minorStep) {
+
+      for (let i = 0; i <= mapDimX; i += minorStep) {
         if (i % majorStep === 0) continue;
         const p1 = toScreen(i, 0);
-        const p2 = toScreen(i, mapDimension);
+        const p2 = toScreen(i, mapDimY);
         ctx.beginPath();
         ctx.moveTo(p1.sx, p1.sy);
         ctx.lineTo(p2.sx, p2.sy);
-        ctx.stroke();
-
-        const p3 = toScreen(0, i);
-        const p4 = toScreen(mapDimension, i);
-        ctx.beginPath();
-        ctx.moveTo(p3.sx, p3.sy);
-        ctx.lineTo(p4.sx, p4.sy);
         ctx.stroke();
       }
 
-      // 2b. Major Grid Lines (every 20m, 25m, or 50m)
+      for (let j = 0; j <= mapDimY; j += minorStep) {
+        if (j % majorStep === 0) continue;
+        const p1 = toScreen(0, j);
+        const p2 = toScreen(mapDimX, j);
+        ctx.beginPath();
+        ctx.moveTo(p1.sx, p1.sy);
+        ctx.lineTo(p2.sx, p2.sy);
+        ctx.stroke();
+      }
+
+      // 3b. Major Grid Lines across full mapDimX and mapDimY + Coordinates
       ctx.strokeStyle = '#1d4ed8';
       ctx.lineWidth = 1.2;
-      for (let i = 0; i <= mapDimension; i += majorStep) {
+
+      // Vertical major lines + Bottom X-Axis labels
+      for (let i = 0; i <= mapDimX; i += majorStep) {
         const p1 = toScreen(i, 0);
-        const p2 = toScreen(i, mapDimension);
+        const p2 = toScreen(i, mapDimY);
         ctx.beginPath();
         ctx.moveTo(p1.sx, p1.sy);
         ctx.lineTo(p2.sx, p2.sy);
         ctx.stroke();
 
-        const p3 = toScreen(0, i);
-        const p4 = toScreen(mapDimension, i);
-        ctx.beginPath();
-        ctx.moveTo(p3.sx, p3.sy);
-        ctx.lineTo(p4.sx, p4.sy);
-        ctx.stroke();
-
-        // Technical Coordinates on both X and Y Axes
         ctx.fillStyle = '#38bdf8';
         ctx.font = 'bold 10px monospace';
-        ctx.fillText(i + 'm', p1.sx - 10, p1.sy + 15);
-        if (i > 0) {
-          ctx.fillText(i + 'm', p3.sx - 34, p3.sy + 4);
+        ctx.fillText(i + 'm', p1.sx - 10, p1.sy + 16);
+      }
+
+      // Horizontal major lines + Left Y-Axis labels
+      for (let j = 0; j <= mapDimY; j += majorStep) {
+        const p1 = toScreen(0, j);
+        const p2 = toScreen(mapDimX, j);
+        ctx.beginPath();
+        ctx.moveTo(p1.sx, p1.sy);
+        ctx.lineTo(p2.sx, p2.sy);
+        ctx.stroke();
+
+        if (j > 0) {
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = 'bold 10px monospace';
+          ctx.fillText(j + 'm', p1.sx - 34, p1.sy + 4);
         }
       }
 
-      // 2c. Outer Usable Site Boundary Frame
+      // 3c. Outer Usable Site Boundary Frame
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 2.0;
       ctx.strokeRect(p0.sx, pMax.sy, plotWidth, plotHeight);
@@ -924,7 +960,7 @@
         ctx.stroke();
       });
 
-      // 3. Draw Static Printed Blueprint / CAD Foundations if Toggled ON
+      // 4. Draw Static Printed Blueprint / CAD Foundations if Toggled ON
       if (showBlueprintOverlay && backgroundImage) {
         ctx.save();
         ctx.globalAlpha = 0.55;
@@ -1032,8 +1068,9 @@
 
       // Placement mode
       if (placingMode) {
-        const wx = Math.max(5, Math.min(mapDimension - 5, Math.round(world.wx)));
-        const wy = Math.max(5, Math.min(mapDimension - 5, Math.round(world.wy)));
+        const bounds = getPlotBounds();
+        const wx = Math.max(5, Math.min(bounds.mapDimX - 5, Math.round(world.wx)));
+        const wy = Math.max(5, Math.min(bounds.mapDimY - 5, Math.round(world.wy)));
         const prefix = placingMode.category.substring(0, 2);
         const newTag = `${prefix}-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -1135,24 +1172,27 @@
 
     function updateSelectedCoordX(val) {
       if (!selectedUnit) return;
-      selectedUnit.x = Math.max(5, Math.min(mapDimension - 5, parseFloat(val) || 0));
+      const bounds = getPlotBounds();
+      selectedUnit.x = Math.max(5, Math.min(bounds.mapDimX - 5, parseFloat(val) || 0));
       runAudit();
     }
 
     function updateSelectedCoordY(val) {
       if (!selectedUnit) return;
-      selectedUnit.y = Math.max(5, Math.min(mapDimension - 5, parseFloat(val) || 0));
+      const bounds = getPlotBounds();
+      selectedUnit.y = Math.max(5, Math.min(bounds.mapDimY - 5, parseFloat(val) || 0));
       runAudit();
     }
 
     window.addEventListener('mousemove', e => {
       if (draggedUnit) {
+        const bounds = getPlotBounds();
         const rect = canvas.getBoundingClientRect();
         const sx = e.clientX - rect.left;
         const sy = e.clientY - rect.top;
         const world = toWorld(sx, sy);
-        draggedUnit.x = Math.max(5, Math.min(mapDimension - 5, Math.round(world.wx)));
-        draggedUnit.y = Math.max(5, Math.min(mapDimension - 5, Math.round(world.wy)));
+        draggedUnit.x = Math.max(5, Math.min(bounds.mapDimX - 5, Math.round(world.wx)));
+        draggedUnit.y = Math.max(5, Math.min(bounds.mapDimY - 5, Math.round(world.wy)));
         inspectUnit(draggedUnit);
         runAudit();
       }
