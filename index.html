@@ -123,9 +123,22 @@
 
     <div class="tool-separator"></div>
 
-    <!-- Export & Clear -->
-    <button class="tool-btn" onclick="exportAnnotatedMap()">📸 Export PNG</button>
-    <button class="tool-btn danger" onclick="clearAllEquipment()">🧹 Clear</button>
+    <!-- Official Report & File Exports -->
+    <button class="tool-btn primary" onclick="openFormalReportModal()" title="Generates formal printable engineering audit report (Print to PDF)">
+      <span>📑</span> <b>Official Audit Report (PDF / Print)</b>
+    </button>
+
+    <button class="tool-btn" onclick="exportCoordinatesCsv()" title="Export coordinates table as CSV for AutoCAD, PDMS, SmartPlant 3D and Excel">
+      <span>📊</span> Export CSV (CAD Data)
+    </button>
+
+    <button class="tool-btn" onclick="exportAnnotatedMap()" title="Export high-resolution PNG image of the plot plan markup">
+      <span>🖼️</span> Export PNG (Drawing)
+    </button>
+
+    <button class="tool-btn danger" onclick="clearAllEquipment()" title="Clear all equipment from plot plan">
+      <span>🧹</span> Clear
+    </button>
   </div>
 
   <div class="main-container">
@@ -443,12 +456,19 @@
     }
 
     function loadSampleBlueprint() {
+      cancelPlacing();
+      // 1. Populate the 10 industrial equipment nodes on their CAD foundations
+      equipmentList = JSON.parse(JSON.stringify(defaultSampleNodes));
+      
+      // 2. Load the CAD blueprint background image
       const img = new Image();
       img.onload = function() {
         backgroundImage = img;
         drawPlot();
       };
       img.src = 'sample_refinery_blueprint.png';
+
+      runAudit();
     }
 
     function updateScale(val) {
@@ -847,14 +867,210 @@
 
     function exportAnnotatedMap() {
       const link = document.createElement('a');
-      link.download = `siting_audit_IPS_${Date.now()}.png`;
+      link.download = `plot_plan_safety_drawing_${Date.now()}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
+    }
+
+    // Formal PDF / Printable Report Modal Logic
+    function openFormalReportModal() {
+      const modal = document.getElementById('reportModal');
+      const content = document.getElementById('reportModalContent');
+      
+      const now = new Date();
+      const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
+      const critCount = currentViolations.filter(v => v.severity === "CRITICAL").length;
+      const warnCount = currentViolations.filter(v => v.severity !== "CRITICAL").length;
+      const statusClass = currentViolations.length > 0 ? "ncr-fail" : "ncr-pass";
+      const statusText = currentViolations.length > 0 ? `NON-COMPLIANT (${currentViolations.length} DEFICIENCIES)` : "FULLY COMPLIANT";
+
+      let violationRows = "";
+      currentViolations.forEach((v, idx) => {
+        const sevClass = v.severity === "CRITICAL" ? "badge-crit-p" : "badge-warn-p";
+        violationRows += `
+          <tr>
+            <td style="text-align:center;">${idx + 1}</td>
+            <td><b>${v.u1.tag}</b><br><small style="color:#64748b;">${v.u1.category}</small></td>
+            <td><b>${v.u2.tag}</b><br><small style="color:#64748b;">${v.u2.category}</small></td>
+            <td style="text-align:center;">${v.actual} m</td>
+            <td style="text-align:center;"><b>${v.required} m</b></td>
+            <td style="text-align:center; color:#dc2626; font-weight:bold;">-${v.deficit} m</td>
+            <td style="text-align:center;"><span class="report-badge ${sevClass}">${v.severity}</span></td>
+            <td>${v.stdRef}</td>
+            <td style="font-size:0.85em;">${v.rationale}</td>
+          </tr>
+        `;
+      });
+
+      let windRows = "";
+      if (currentWindWarnings.length > 0) {
+        currentWindWarnings.forEach((w, idx) => {
+          windRows += `<li><b>${w.source.tag} (${w.source.category})</b> is situated upwind from <b>${w.target.tag} (${w.target.category})</b> at distance ${w.dist}m. Wind angle: ${windAngle}°. <i>Violates IPS-E-PR-190 mandatory upwind siting of ignition sources.</i></li>`;
+        });
+      } else {
+        windRows = "<li>No critical downwind vapor drift hazards detected at current wind angle.</li>";
+      }
+
+      content.innerHTML = `
+        <div class="print-doc">
+          <div class="doc-header">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <h1 style="font-size:1.4rem; color:#0f172a; margin-bottom:4px;">PROCESS PLANT FACILITY SITING AUDIT REPORT</h1>
+                <div style="font-size:0.85rem; color:#475569; font-weight:600;">
+                  STANDARDS: IPS-G-SF-150 / INSO 23591 (2023) | IPS-E-PR-190 | TotalEnergies GS-GR-HSE-301
+                </div>
+              </div>
+              <div class="status-box ${statusClass}">
+                ${statusText}
+              </div>
+            </div>
+            <div class="meta-grid">
+              <div><b>Document No:</b> NCR-SITING-${now.getFullYear()}-${Math.floor(1000 + Math.random()*9000)}</div>
+              <div><b>Date & Time:</b> ${dateStr}</div>
+              <div><b>Evaluated Plot Plan:</b> Petrochemical Complex (Scale: 0 to ${mapDimension}m)</div>
+              <div><b>Prevailing Wind Direction:</b> ${windAngle}° (from East-North-East)</div>
+            </div>
+          </div>
+
+          <h3 class="sec-title">1. Executive Compliance Summary</h3>
+          <div class="summary-kpis">
+            <div class="kpi-box-p"><span>Total Equipment Nodes</span><b>${equipmentList.length}</b></div>
+            <div class="kpi-box-p"><span style="color:#dc2626;">Critical Fire Violations</span><b style="color:#dc2626;">${critCount}</b></div>
+            <div class="kpi-box-p"><span style="color:#d97706;">Spacing Gap Deficiencies</span><b style="color:#d97706;">${warnCount}</b></div>
+            <div class="kpi-box-p"><span style="color:#7c3aed;">Wind Ignition Drift Hazards</span><b style="color:#7c3aed;">${currentWindWarnings.length}</b></div>
+          </div>
+
+          <h3 class="sec-title">2. Mandatory Fire Zone Separation Non-Compliance Matrix (IPS-G-SF-150)</h3>
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width:30px;">#</th>
+                <th>Unit A</th>
+                <th>Unit B</th>
+                <th>Actual</th>
+                <th>IPS Min</th>
+                <th>Deficit</th>
+                <th>Severity</th>
+                <th>Standard</th>
+                <th>Technical Hazard Rationale</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${violationRows || '<tr><td colspan="9" style="text-align:center; padding:15px; color:#16a34a;"><b>All equipment separations fully satisfy IPS-G-SF-150 / INSO 23591 requirements.</b></td></tr>'}
+            </tbody>
+          </table>
+
+          <h3 class="sec-title">3. Prevailing Wind & Atmospheric Dispersion Assessment (IPS-E-PR-190)</h3>
+          <ul style="padding-left:20px; font-size:0.88rem; line-height:1.7; color:#334155;">
+            ${windRows}
+          </ul>
+
+          <h3 class="sec-title">4. Physical Effect Threshold Limits (TotalEnergies GS-GR-HSE-301)</h3>
+          <div style="font-size:0.85rem; color:#475569; line-height:1.6; background:#f8fafc; padding:10px 14px; border:1px solid #e2e8f0; border-radius:6px;">
+            • <b>Thermal Radiation Footprints:</b> Escalation Zone = 16 kW/m² | Restricted Access = 5 kW/m² | Public/Admin = 3 kW/m² | Ground Flare = 4.7 kW/m².<br>
+            • <b>Blast Overpressure Envelopes:</b> Process Escalation = 200 mbar | Boundary Fence = 140 mbar | Control Room Structure Integrity = 50 mbar.
+          </div>
+
+          <h3 class="sec-title">5. Mandatory Engineering & Corrective Mitigations</h3>
+          <ol style="padding-left:20px; font-size:0.85rem; line-height:1.7; color:#334155;">
+            <li><b>Physical Spacing Correction:</b> Re-route coordinates for units with negative deficits to satisfy IPS-G-SF-150 fire separation distances.</li>
+            <li><b>Passive Fire Protection (PFP):</b> Where plot plan boundaries cannot be extended, install certified blast walls and firewalls compliant with API 2218 / API 752.</li>
+            <li><b>Gas Detection & Emergency Shutdown:</b> Position continuous open-path LEL hydrocarbon detectors along the upwind-downwind axis between storage tanks and fired heaters.</li>
+          </ol>
+
+          <div class="signoff-grid">
+            <div>
+              <div style="border-bottom:1px solid #94a3b8; height:40px;"></div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">Prepared by: Lead Process Safety Engineer</div>
+            </div>
+            <div>
+              <div style="border-bottom:1px solid #94a3b8; height:40px;"></div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">Reviewed by: Plant Layout Siting Lead</div>
+            </div>
+            <div>
+              <div style="border-bottom:1px solid #94a3b8; height:40px;"></div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">Approved by: Technical HSE Director</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+    }
+
+    function closeFormalReportModal() {
+      document.getElementById('reportModal').style.display = 'none';
+    }
+
+    function printFormalReport() {
+      window.print();
     }
 
     // Initialize with sample CSV data and CAD blueprint
     loadSampleCsv();
     setTimeout(resizeCanvas, 50);
   </script>
+
+  <!-- Formal Report Modal Styles & Structure -->
+  <style>
+    .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; display: none; justify-content: center; align-items: center; }
+    .modal-container { background: #1e293b; width: 92vw; max-width: 1100px; height: 92vh; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid #334155; }
+    .modal-topbar { background: #0f172a; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+    .modal-body { flex: 1; overflow-y: auto; padding: 25px; background: #e2e8f0; }
+    
+    .print-doc { background: #ffffff; color: #0f172a; padding: 40px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1000px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .doc-header { border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
+    .status-box { padding: 6px 14px; border-radius: 4px; font-weight: 800; font-size: 0.8rem; text-align: center; }
+    .ncr-fail { background: #fee2e2; color: #dc2626; border: 1px solid #ef4444; }
+    .ncr-pass { background: #dcfce7; color: #16a34a; border: 1px solid #22c55e; }
+    .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 15px; font-size: 0.82rem; color: #475569; background: #f8fafc; padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .sec-title { font-size: 1rem; color: #0f172a; margin-top: 22px; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; }
+    .summary-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+    .kpi-box-p { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; text-align: center; }
+    .kpi-box-p span { font-size: 0.72rem; color: #64748b; display: block; text-transform: uppercase; font-weight: 600; }
+    .kpi-box-p b { font-size: 1.4rem; color: #0f172a; margin-top: 4px; display: block; }
+    
+    .report-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; }
+    .report-table th { background: #0f172a; color: #ffffff; padding: 8px; text-align: left; font-size: 0.75rem; }
+    .report-table td { padding: 8px 6px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .report-table tr:nth-child(even) { background: #f8fafc; }
+    .report-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-weight: 700; font-size: 0.7rem; }
+    .badge-crit-p { background: #fee2e2; color: #dc2626; border: 1px solid #ef4444; }
+    .badge-warn-p { background: #fef3c7; color: #d97706; border: 1px solid #f59e0b; }
+    .signoff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #reportModal, #reportModal * { visibility: visible; }
+      #reportModal { position: absolute; left: 0; top: 0; width: 100%; height: auto; background: none; }
+      .modal-container { width: 100% !important; max-width: 100% !important; height: auto !important; box-shadow: none !important; border: none !important; }
+      .modal-topbar { display: none !important; }
+      .modal-body { padding: 0 !important; background: none !important; }
+      .print-doc { padding: 0 !important; box-shadow: none !important; }
+    }
+  </style>
+
+  <!-- Formal Report Modal Dialog -->
+  <div class="modal-backdrop" id="reportModal" onclick="if(event.target===this) closeFormalReportModal();">
+    <div class="modal-container">
+      <div class="modal-topbar">
+        <div style="font-weight:700; color:#38bdf8; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+          <span>📑</span> Official Facility Siting Audit Report (IPS-G-SF-150 / TotalEnergies)
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button onclick="printFormalReport()" style="background:#0284c7; color:white; border:none; padding:6px 14px; border-radius:6px; font-weight:700; font-size:0.8rem; cursor:pointer;">
+            🖨️ Print / Save as PDF
+          </button>
+          <button onclick="closeFormalReportModal()" style="background:#334155; color:#f8fafc; border:none; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.8rem; cursor:pointer;">
+            ✖ Close
+          </button>
+        </div>
+      </div>
+      <div class="modal-body" id="reportModalContent">
+        <!-- Injected via openFormalReportModal() -->
+      </div>
+    </div>
+  </div>
 </body>
 </html>
