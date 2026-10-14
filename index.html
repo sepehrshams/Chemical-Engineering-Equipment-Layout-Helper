@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ChemSafePlot - Facility Siting & Layout Rules Engine (IPS-G-SF-150 / TotalEnergies)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0b1120; color: #f8fafc; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    header { background: #111c30; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; }
+    header h1 { font-size: 1.15rem; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+    header .subtitle { font-size: 0.73rem; color: #94a3b8; margin-top: 2px; }
+    
+    .toolbar { background: #0f172a; padding: 7px 18px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tool-btn { background: #1e293b; color: #f8fafc; border: 1px solid #334155; padding: 5px 11px; border-radius: 6px; font-size: 0.74rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s; }
+    .tool-btn:hover { background: #334155; border-color: #475569; }
+    .tool-btn.primary { background: #0284c7; border-color: #38bdf8; }
+    .tool-btn.primary:hover { background: #0369a1; }
+    .tool-btn.accent { background: #4f46e5; border-color: #818cf8; }
+    .tool-btn.accent:hover { background: #4338ca; }
+    .tool-btn.danger { background: #7f1d1d; border-color: #ef4444; }
+    .tool-separator { width: 1px; height: 22px; background: #334155; margin: 0 3px; }
+
+    .main-container { display: flex; flex: 1; height: calc(100vh - 100px); }
+    .canvas-pane { flex: 1; position: relative; background: #070d17; display: flex; flex-direction: column; overflow: hidden; }
+    #plotCanvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+    
+    .canvas-hud { position: absolute; top: 12px; left: 12px; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); padding: 8px 14px; border-radius: 8px; border: 1px solid #334155; font-size: 0.73rem; color: #94a3b8; pointer-events: none; z-index: 10; }
+    .placement-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: #0284c7; color: white; padding: 7px 18px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4); display: none; z-index: 20; }
+
+    .side-pane { width: 490px; background: #0f172a; border-left: 1px solid #1e293b; display: flex; flex-direction: column; overflow-y: auto; }
+    .section { padding: 10px 14px; border-bottom: 1px solid #1e293b; }
+    .section-title { font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+    
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .kpi-card { background: #1e293b; padding: 6px 4px; border-radius: 6px; text-align: center; border: 1px solid #334155; }
+    .kpi-title { font-size: 0.62rem; color: #94a3b8; text-transform: uppercase; }
+    .kpi-val { font-size: 1.1rem; font-weight: 700; margin-top: 1px; }
+    .kpi-crit { color: #ef4444; }
+    .kpi-warn { color: #f59e0b; }
+    .kpi-wind { color: #a855f7; }
+
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input[type="range"] { flex: 1; accent-color: #38bdf8; cursor: pointer; }
+    .slider-val { font-size: 0.8rem; font-weight: 700; color: #38bdf8; width: 36px; text-align: right; }
+
+    /* Palette grid */
+    .palette-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; max-height: 145px; overflow-y: auto; padding-right: 2px; }
+    .palette-btn { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 5px 7px; border-radius: 5px; font-size: 0.68rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; text-align: left; }
+    .palette-btn:hover { background: #334155; border-color: #38bdf8; }
+    .palette-indicator { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+    /* Standards & Thresholds Strip */
+    .threshold-strip { display: flex; gap: 6px; font-size: 0.67rem; background: #111c30; padding: 6px 8px; border-radius: 5px; border: 1px solid #1e293b; }
+    .thresh-item { flex: 1; text-align: center; }
+    .thresh-label { color: #94a3b8; font-size: 0.58rem; text-transform: uppercase; }
+    .thresh-val { color: #f59e0b; font-weight: 700; }
+
+    .table-container { flex: 1; overflow-y: auto; padding: 0 12px 12px 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.69rem; }
+    th { background: #111c30; color: #94a3b8; padding: 6px 5px; text-align: left; position: sticky; top: 0; border-bottom: 1px solid #334155; z-index: 5; }
+    td { padding: 6px 5px; border-bottom: 1px solid #1e293b; color: #e2e8f0; vertical-align: top; }
+    tr:hover { background: #1e293b; }
+    .badge { display: inline-block; padding: 2px 5px; border-radius: 3px; font-weight: 700; font-size: 0.62rem; }
+    .badge-crit { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+    .badge-warn { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
+    
+    .detail-card { background: #111c30; border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; margin-top: 8px; font-size: 0.7rem; line-height: 1.4; color: #cbd5e1; }
+    .detail-title { font-weight: 700; color: #38bdf8; margin-bottom: 3px; }
+    .unit-inspect { background: #111c30; border: 1px solid #334155; border-radius: 6px; padding: 6px 10px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1><span>🏭</span> ChemSafePlot: Facility Siting & Layout Rules Engine</h1>
+      <div class="subtitle">Compiled based on <b>IPS-G-SF-150 / INSO 23591 (2023)</b>, <b>IPS-E-PR-190</b>, <b>TotalEnergies GS-GR-HSE-301</b> & <b>CCPS</b></div>
+    </div>
+    <div style="font-size: 0.73rem; color: #94a3b8;">
+      Standard: <span style="color: #38bdf8; font-weight: 700;">INSO 23591 / IPS-G-SF-150</span>
+    </div>
+  </header>
+
+  <!-- Top Action Toolbar -->
+  <div class="toolbar">
+    <!-- Map Upload -->
+    <label class="tool-btn" style="cursor: pointer;">
+      <span>🗺️</span> <b>Upload Blueprint Image</b>
+      <input type="file" id="mapUploadInput" accept="image/*" style="display:none;" onchange="handleMapUpload(event)">
+    </label>
+
+    <button class="tool-btn" onclick="loadSampleBlueprint()">
+      <span>🏗️</span> Load Sample CAD Map
+    </button>
+
+    <div class="tool-separator"></div>
+
+    <!-- CSV Coordinates Importer -->
+    <label class="tool-btn primary" style="cursor: pointer;">
+      <span>📥</span> <b>Import Coordinates (CSV)</b>
+      <input type="file" id="csvFileInput" accept=".csv,.txt" style="display:none;" onchange="handleCsvImport(event)">
+    </label>
+
+    <button class="tool-btn accent" onclick="loadSampleCsv()">
+      <span>⚡</span> Load Sample Coordinates (CSV)
+    </button>
+
+    <button class="tool-btn" onclick="exportCoordinatesCsv()">
+      <span>📤</span> Export CSV
+    </button>
+
+    <div class="tool-separator"></div>
+
+    <!-- Scale Control -->
+    <div style="display:flex; align-items:center; gap:4px; font-size:0.73rem; color:#94a3b8;">
+      <span>📏 Scale:</span>
+      <select id="scaleSelect" class="tool-btn" style="padding: 3px 6px;" onchange="updateScale(this.value)">
+        <option value="150">150 x 150 m</option>
+        <option value="220" selected>220 x 220 m (Default)</option>
+        <option value="350">350 x 350 m</option>
+        <option value="500">500 x 500 m</option>
+      </select>
+    </div>
+
+    <div class="tool-separator"></div>
+
+    <!-- Export & Clear -->
+    <button class="tool-btn" onclick="exportAnnotatedMap()">📸 Export PNG</button>
+    <button class="tool-btn danger" onclick="clearAllEquipment()">🧹 Clear</button>
+  </div>
+
+  <div class="main-container">
+    <div class="canvas-pane">
+      <canvas id="plotCanvas"></canvas>
+      <div class="canvas-hud">
+        Boundary: <b id="hudScale">0 to 220 Meters</b> | Grid: <span id="hudUnitsCount">10 Units</span> | Rules: <b>IPS-G-SF-150</b>
+      </div>
+      <div class="placement-banner" id="placementBanner">
+        ➕ Click on map to place <span id="placementUnitName">Equipment</span> (ESC to cancel)
+      </div>
+    </div>
+
+    <div class="side-pane">
+      <!-- Equipment Palette (IPS Categories) -->
+      <div class="section">
+        <div class="section-title">
+          <span>Equipment Palette (IPS-G-SF-150 / Total)</span>
+          <span style="font-size:0.67rem; color:#38bdf8;">Click to place</span>
+        </div>
+        <div class="palette-grid" id="paletteGrid">
+          <!-- Dynamically populated from CATEGORY_META -->
+        </div>
+
+        <div id="unitInspector" class="unit-inspect" style="display:none;">
+          <div><b id="inspectName" style="color:#38bdf8;">TK-101</b>: (<span id="inspectCoords">145m, 55m</span>)</div>
+          <button onclick="deleteSelectedUnit()" style="background:#ef4444; color:white; border:none; padding:3px 7px; border-radius:4px; font-size:0.68rem; cursor:pointer;">
+            Delete Unit
+          </button>
+        </div>
+      </div>
+
+      <!-- Wind Angle Slider -->
+      <div class="section">
+        <div class="section-title">Prevailing Wind Direction (IPS-E-PR-190 Siting)</div>
+        <div class="slider-row">
+          <input type="range" id="windSlider" min="0" max="360" value="45" oninput="updateWind(this.value)">
+          <div class="slider-val" id="windVal">45°</div>
+        </div>
+      </div>
+
+      <!-- Safety Thresholds Strip (TotalEnergies GS-GR-HSE-301) -->
+      <div class="section">
+        <div class="section-title">Safety Threshold Limits (Total GS-GR-HSE-301)</div>
+        <div class="threshold-strip">
+          <div class="thresh-item"><div class="thresh-label">Rad Escalation</div><div class="thresh-val">16 kW/m²</div></div>
+          <div class="thresh-item"><div class="thresh-label">Rad Restricted</div><div class="thresh-val">5 kW/m²</div></div>
+          <div class="thresh-item"><div class="thresh-label">Rad Impacted</div><div class="thresh-val">3 kW/m²</div></div>
+          <div class="thresh-item"><div class="thresh-label">Overpressure</div><div class="thresh-val">200 mbar</div></div>
+          <div class="thresh-item"><div class="thresh-label">Ground Flare</div><div class="thresh-val">4.7 kW/m²</div></div>
+        </div>
+      </div>
+
+      <!-- KPI Dashboard -->
+      <div class="section">
+        <div class="section-title">Non-Compliance Dashboard (NCR)</div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-title">Total Units</div><div class="kpi-val" id="kpiUnits">0</div></div>
+          <div class="kpi-card"><div class="kpi-title">Critical Fire</div><div class="kpi-val kpi-crit" id="kpiCrit">0</div></div>
+          <div class="kpi-card"><div class="kpi-title">Spacing Gaps</div><div class="kpi-val kpi-warn" id="kpiWarn">0</div></div>
+          <div class="kpi-card"><div class="kpi-title">Wind Hazards</div><div class="kpi-val kpi-wind" id="kpiWind">0</div></div>
+        </div>
+      </div>
+
+      <!-- Non-Compliance Violations Table -->
+      <div class="section" style="padding-bottom: 2px;">
+        <div class="section-title">
+          <span>Non-Compliance Report (IPS-G-SF-150 / INSO 23591)</span>
+        </div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Pair (Tag & Cat)</th>
+              <th>Actual</th>
+              <th>IPS Min</th>
+              <th>Deficit</th>
+              <th>Severity</th>
+            </tr>
+          </thead>
+          <tbody id="violationTableBody"></tbody>
+        </table>
+
+        <div id="selectedDetail" class="detail-card" style="display:none;">
+          <div class="detail-title" id="detTitle">IPS-G-SF-150 / INSO 23591 Siting Rationale</div>
+          <p id="detDesc"></p>
+          <div style="margin-top:5px; color:#38bdf8; font-weight:600;" id="detStd"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Categories matching UnitCategory enum in safety_standards.py
+    const CATEGORIES = {
+      "T1_ERUPTIVE": { name: "Eruptive Wellhead", fa: "چاه فورانی نفت/گاز", color: "#dc2626", radius: 8, is_fuel: true, is_ignition: false },
+      "T1_NON_ERUPTIVE": { name: "Non-Eruptive Wellhead", fa: "چاه غیرفورانی", color: "#ea580c", radius: 6, is_fuel: true, is_ignition: false },
+      "T1_WATER_INJ": { name: "Water Injection Well", fa: "چاه تزریق آب", color: "#0284c7", radius: 5, is_fuel: false, is_ignition: false },
+      "T2_HIGH_P": { name: "High-Pressure Process (>70 barg)", fa: "فرآیند فشار قوی", color: "#f97316", radius: 7, is_fuel: true, is_ignition: false },
+      "T2_LOW_P": { name: "Low-Pressure Process (<=70 barg)", fa: "فرآیند کم‌فشار", color: "#fb923c", radius: 6, is_fuel: true, is_ignition: false },
+      "T2_LPG": { name: "LPG Fractionation Unit", fa: "واحد گاز مایع", color: "#c026d3", radius: 8, is_fuel: true, is_ignition: false },
+      "T2_OIL": { name: "Oil Separation / Stabilization", fa: "تفکیک نفت", color: "#b45309", radius: 7, is_fuel: true, is_ignition: false },
+      "T2_SLUG_CATCHER": { name: "Slug Catcher", fa: "لخته‌گیر با حجم بالا", color: "#d97706", radius: 8, is_fuel: true, is_ignition: false },
+      "T3_LPG_MOUNDED": { name: "Mounded LPG Bullets", fa: "مخازن مدفون LPG", color: "#9333ea", radius: 9, is_fuel: true, is_ignition: false },
+      "T3_LPG_ABOVE": { name: "Aboveground LPG Spheres", fa: "مخازن روباز LPG", color: "#7e22ce", radius: 12, is_fuel: true, is_ignition: false },
+      "T3_CRUDE_S": { name: "Crude Tank (<1000m² Dike)", fa: "مخزن نفت خام کوچک", color: "#6b21a8", radius: 8, is_fuel: true, is_ignition: false },
+      "T3_CRUDE_M": { name: "Crude Tank (1000-3000m² Dike)", fa: "مخزن نفت خام متوسط", color: "#581c87", radius: 11, is_fuel: true, is_ignition: false },
+      "T3_CRUDE_L": { name: "Crude Tank (3000-7000m² Dike)", fa: "مخزن نفت خام بزرگ", color: "#3b0764", radius: 14, is_fuel: true, is_ignition: false },
+      "T4_FIRED_HEATER": { name: "Fired Heater / Boiler", fa: "کوره و گرمکن مشعل‌دار", color: "#ef4444", radius: 7, is_fuel: true, is_ignition: true },
+      "T5_POWER_GEN": { name: "Turbines / Power Compressors", fa: "ژنراتور و کمپرسورخانه", color: "#e11d48", radius: 7, is_fuel: true, is_ignition: false },
+      "T6_ADMIN_SERVICE": { name: "Admin, Camp & Services", fa: "ساختمان اداری / پرسنلی", color: "#2563eb", radius: 9, is_fuel: false, is_ignition: false },
+      "T6_CONTROL_ROOM": { name: "Central Control Room (CCR)", fa: "اتاق کنترل مرکزی", color: "#1d4ed8", radius: 8, is_fuel: false, is_ignition: false },
+      "T6_SUBSTATION": { name: "Electrical Substation", fa: "پست برق اصلی", color: "#1e40af", radius: 6, is_fuel: false, is_ignition: false },
+      "T7_FIRE_WATER": { name: "Fire Water Pump Station", fa: "ایستگاه پمپ آتش‌نشانی", color: "#16a34a", radius: 7, is_fuel: false, is_ignition: false },
+      "T8_COLD_VENT": { name: "Cold Vent Stack", fa: "ونت سرد هیدروکربنی", color: "#db2777", radius: 5, is_fuel: true, is_ignition: false },
+      "T9_FLARE": { name: "Elevated Flare Stack", fa: "مشعل و فلر مرتفع", color: "#e11d48", radius: 6, is_fuel: true, is_ignition: true },
+      "T10_LOADING_RACK": { name: "Tanker Loading Gantry", fa: "سکوهای بارگیری و تخلیه", color: "#0d9488", radius: 8, is_fuel: true, is_ignition: false },
+      "PROPERTY_FENCE": { name: "Site Boundary Fence", fa: "فنس محیطی سایت", color: "#64748b", radius: 4, is_fuel: false, is_ignition: false }
+    };
+
+    // Official Separation Matrix based on IPS-G-SF-150 / INSO 23591
+    const IPS_MATRIX = {
+      "T1_ERUPTIVE-T6_ADMIN_SERVICE": 200,
+      "T1_ERUPTIVE-T6_CONTROL_ROOM": 150,
+      "T1_ERUPTIVE-T3_CRUDE_S": 45,
+      "T1_ERUPTIVE-T3_LPG_ABOVE": 100,
+      "T1_ERUPTIVE-T9_FLARE": 150,
+      "T1_ERUPTIVE-T4_FIRED_HEATER": 100,
+      "T1_ERUPTIVE-PROPERTY_FENCE": 200,
+
+      "T2_HIGH_P-T4_FIRED_HEATER": 60,
+      "T2_HIGH_P-T6_CONTROL_ROOM": 30,
+      "T2_HIGH_P-T6_ADMIN_SERVICE": 100,
+      "T2_HIGH_P-T3_LPG_ABOVE": 60,
+      "T2_HIGH_P-T3_CRUDE_L": 60,
+      "T2_HIGH_P-T9_FLARE": 150,
+      "T2_HIGH_P-PROPERTY_FENCE": 250,
+
+      "T2_LOW_P-T4_FIRED_HEATER": 30,
+      "T2_LOW_P-T6_CONTROL_ROOM": 30,
+      "T2_LOW_P-T6_ADMIN_SERVICE": 60,
+      "T2_LOW_P-T9_FLARE": 100,
+
+      "T2_LPG-T4_FIRED_HEATER": 50,
+      "T2_LPG-T6_CONTROL_ROOM": 45,
+      "T2_LPG-T3_LPG_ABOVE": 60,
+      "T2_OIL-T4_FIRED_HEATER": 30,
+      "T2_SLUG_CATCHER-T4_FIRED_HEATER": 60,
+      "T2_SLUG_CATCHER-T6_CONTROL_ROOM": 60,
+
+      "T4_FIRED_HEATER-T6_CONTROL_ROOM": 30,
+      "T4_FIRED_HEATER-T6_ADMIN_SERVICE": 60,
+      "T4_FIRED_HEATER-T5_POWER_GEN": 30,
+      "T4_FIRED_HEATER-T3_LPG_ABOVE": 60,
+      "T4_FIRED_HEATER-T3_CRUDE_L": 60,
+      "T4_FIRED_HEATER-T3_CRUDE_S": 30,
+      "T4_FIRED_HEATER-T10_LOADING_RACK": 45,
+      "T4_FIRED_HEATER-PROPERTY_FENCE": 75,
+
+      "T3_CRUDE_L-T6_CONTROL_ROOM": 90,
+      "T3_CRUDE_L-T6_ADMIN_SERVICE": 90,
+      "T3_CRUDE_L-T10_LOADING_RACK": 45,
+      "T3_CRUDE_L-PROPERTY_FENCE": 130,
+      "T3_CRUDE_L-T9_FLARE": 100,
+
+      "T3_CRUDE_M-T6_CONTROL_ROOM": 60,
+      "T3_CRUDE_M-T6_ADMIN_SERVICE": 75,
+      "T3_CRUDE_M-PROPERTY_FENCE": 90,
+
+      "T3_LPG_ABOVE-T6_CONTROL_ROOM": 60,
+      "T3_LPG_ABOVE-T6_ADMIN_SERVICE": 100,
+      "T3_LPG_ABOVE-T5_POWER_GEN": 60,
+      "T3_LPG_ABOVE-T10_LOADING_RACK": 45,
+      "T3_LPG_ABOVE-T9_FLARE": 120,
+      "T3_LPG_ABOVE-PROPERTY_FENCE": 300,
+
+      "T3_LPG_MOUNDED-T6_CONTROL_ROOM": 30,
+      "T3_LPG_MOUNDED-T6_ADMIN_SERVICE": 60,
+      "T3_LPG_MOUNDED-PROPERTY_FENCE": 75,
+
+      "T9_FLARE-T6_CONTROL_ROOM": 120,
+      "T9_FLARE-T6_ADMIN_SERVICE": 150,
+      "T9_FLARE-PROPERTY_FENCE": 100,
+
+      "T7_FIRE_WATER-T2_HIGH_P": 40,
+      "T7_FIRE_WATER-T3_LPG_ABOVE": 60,
+      "T7_FIRE_WATER-T3_CRUDE_L": 60,
+      "T7_FIRE_WATER-T4_FIRED_HEATER": 30
+    };
+
+    let equipmentList = [];
+    let mapDimension = 220;
+    let windAngle = 45;
+    let draggedUnit = null;
+    let selectedUnit = null;
+    let placingMode = null;
+    let backgroundImage = null;
+
+    // Populate Equipment Palette
+    const paletteGrid = document.getElementById('paletteGrid');
+    for (let key in CATEGORIES) {
+      const c = CATEGORIES[key];
+      const btn = document.createElement('button');
+      btn.className = 'palette-btn';
+      btn.onclick = () => startPlacing(key, c.name, c.radius);
+      btn.innerHTML = `<span class="palette-indicator" style="background:${c.color};"></span> ${c.name}`;
+      paletteGrid.appendChild(btn);
+    }
+
+    function getIpsSeparation(c1, c2) {
+      if (IPS_MATRIX[c1 + '-' + c2]) return IPS_MATRIX[c1 + '-' + c2];
+      if (IPS_MATRIX[c2 + '-' + c1]) return IPS_MATRIX[c2 + '-' + c1];
+      return null;
+    }
+
+    // Default Sample Layout based on sample_plot_plan_coordinates.csv
+    const defaultSampleNodes = [
+      { tag: "FH-101", category: "T4_FIRED_HEATER", x: 55, y: 55, z: 0, radius: 7, is_ignition: true, is_fuel: true },
+      { tag: "TK-101", category: "T3_LPG_ABOVE", x: 145, y: 55, z: 0, radius: 10, is_ignition: false, is_fuel: true },
+      { tag: "TK-102", category: "T3_CRUDE_L", x: 175, y: 55, z: 0, radius: 12, is_ignition: false, is_fuel: true },
+      { tag: "R-301", category: "T2_HIGH_P", x: 55, y: 145, z: 0, radius: 6, is_ignition: false, is_fuel: true },
+      { tag: "CP-401", category: "T5_POWER_GEN", x: 85, y: 145, z: 0, radius: 7, is_ignition: false, is_fuel: true },
+      { tag: "CR-01", category: "T6_CONTROL_ROOM", x: 60, y: 205, z: 0, radius: 8, is_ignition: false, is_fuel: false },
+      { tag: "FL-501", category: "T9_FLARE", x: 185, y: 185, z: 40, radius: 6, is_ignition: true, is_fuel: true },
+      { tag: "FW-901", category: "T7_FIRE_WATER", x: 25, y: 25, z: 0, radius: 7, is_ignition: false, is_fuel: false },
+      { tag: "LR-601", category: "T10_LOADING_RACK", x: 155, y: 135, z: 0, radius: 8, is_ignition: false, is_fuel: true },
+      { tag: "WH-01", category: "T1_ERUPTIVE", x: 190, y: 30, z: 0, radius: 8, is_ignition: false, is_fuel: true }
+    ];
+
+    function loadSampleCsv() {
+      cancelPlacing();
+      equipmentList = JSON.parse(JSON.stringify(defaultSampleNodes));
+      loadSampleBlueprint();
+      runAudit();
+    }
+
+    // CSV File Importer (Drag or Select CSV)
+    function handleCsvImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        parseCsvData(e.target.result);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCsvData(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) return;
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      
+      const tagIdx = headers.indexOf('tag');
+      const catIdx = headers.indexOf('category');
+      const xIdx = headers.indexOf('x');
+      const yIdx = headers.indexOf('y');
+      const zIdx = headers.indexOf('z');
+      const radIdx = headers.indexOf('radius');
+
+      const newNodes = [];
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',').map(p => p.trim());
+        if (parts.length <= Math.max(tagIdx, catIdx, xIdx, yIdx)) continue;
+        
+        const tag = parts[tagIdx] || `EQ-${i}`;
+        let cat = parts[catIdx] || "T2_LOW_P";
+        if (!CATEGORIES[cat]) {
+          // Find matching category key
+          for (let k in CATEGORIES) {
+            if (k.toLowerCase() === cat.toLowerCase()) { cat = k; break; }
+          }
+        }
+        const x = parseFloat(parts[xIdx]) || 0;
+        const y = parseFloat(parts[yIdx]) || 0;
+        const z = zIdx !== -1 ? (parseFloat(parts[zIdx]) || 0) : 0;
+        const radius = radIdx !== -1 ? (parseFloat(parts[radIdx]) || (CATEGORIES[cat] ? CATEGORIES[cat].radius : 6)) : (CATEGORIES[cat] ? CATEGORIES[cat].radius : 6);
+
+        newNodes.push({ tag, category: cat, x, y, z, radius });
+      }
+
+      if (newNodes.length > 0) {
+        equipmentList = newNodes;
+        runAudit();
+        alert(`Successfully imported ${newNodes.length} equipment nodes from CSV!`);
+      }
+    }
+
+    function exportCoordinatesCsv() {
+      let csv = "Tag,Category,X,Y,Z,Radius,IsIgnition,IsFuel\n";
+      equipmentList.forEach(u => {
+        const cat = CATEGORIES[u.category] || {};
+        csv += `${u.tag},${u.category},${u.x},${u.y},${u.z || 0},${u.radius},${cat.is_ignition || false},${cat.is_fuel || false}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.download = `plot_plan_coordinates_${Date.now()}.csv`;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+    }
+
+    function handleMapUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          backgroundImage = img;
+          drawPlot();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function loadSampleBlueprint() {
+      const img = new Image();
+      img.onload = function() {
+        backgroundImage = img;
+        drawPlot();
+      };
+      img.src = 'sample_refinery_blueprint.png';
+    }
+
+    function updateScale(val) {
+      mapDimension = parseInt(val);
+      document.getElementById('hudScale').textContent = `0 to ${mapDimension} Meters`;
+      runAudit();
+    }
+
+    function startPlacing(category, name, defaultRadius) {
+      placingMode = { category, name, radius: defaultRadius };
+      document.getElementById('placementBanner').style.display = 'block';
+      document.getElementById('placementUnitName').textContent = name;
+      canvas.style.cursor = 'crosshair';
+    }
+
+    function cancelPlacing() {
+      placingMode = null;
+      document.getElementById('placementBanner').style.display = 'none';
+      canvas.style.cursor = 'default';
+    }
+
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape') cancelPlacing();
+    });
+
+    function clearAllEquipment() {
+      if (confirm("Clear all equipment from plot plan?")) {
+        equipmentList = [];
+        selectedUnit = null;
+        document.getElementById('unitInspector').style.display = 'none';
+        runAudit();
+      }
+    }
+
+    function deleteSelectedUnit() {
+      if (selectedUnit) {
+        equipmentList = equipmentList.filter(u => u !== selectedUnit);
+        selectedUnit = null;
+        document.getElementById('unitInspector').style.display = 'none';
+        runAudit();
+      }
+    }
+
+    function updateWind(val) {
+      windAngle = parseFloat(val);
+      document.getElementById('windVal').textContent = windAngle + '°';
+      runAudit();
+    }
+
+    let currentViolations = [];
+    let currentWindWarnings = [];
+
+    function runAudit() {
+      currentViolations = [];
+      currentWindWarnings = [];
+      const n = equipmentList.length;
+
+      const windRad = (windAngle * Math.PI) / 180;
+      const wdx = Math.cos(windRad);
+      const wdy = Math.sin(windRad);
+
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const u1 = equipmentList[i];
+          const u2 = equipmentList[j];
+          const r1 = u1.radius || 6;
+          const r2 = u2.radius || 6;
+
+          const centerDist = Math.hypot(u1.x - u2.x, u1.y - u2.y);
+          const edgeDist = Math.max(0, centerDist - (r1 + r2));
+
+          const reqDist = getIpsSeparation(u1.category, u2.category);
+          if (reqDist) {
+            if (edgeDist < reqDist) {
+              const deficit = reqDist - edgeDist;
+              const severity = (edgeDist / reqDist < 0.5) ? "CRITICAL" : (edgeDist / reqDist < 0.8 ? "HIGH" : "WARNING");
+              currentViolations.push({
+                u1, u2,
+                actual: edgeDist.toFixed(1),
+                required: reqDist,
+                deficit: deficit.toFixed(1),
+                severity,
+                stdRef: "IPS-G-SF-150 / INSO 23591",
+                rationale: `Mandatory fire zone separation between ${u1.category} (${u1.tag}) and ${u2.category} (${u2.tag}) is breached. Required distance: ${reqDist}m.`
+              });
+            }
+          }
+
+          // Wind orientation check
+          checkWindIgnition(u1, u2, wdx, wdy);
+          checkWindIgnition(u2, u1, wdx, wdy);
+        }
+      }
+
+      updateUI();
+      drawPlot();
+    }
+
+    function checkWindIgnition(source, target, wdx, wdy) {
+      const cat1 = CATEGORIES[source.category] || {};
+      const cat2 = CATEGORIES[target.category] || {};
+      
+      // If target is ignition source and source is fuel source
+      if (cat2.is_ignition && cat1.is_fuel && source !== target) {
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist === 0 || dist > 120) return;
+        const align = (dx / dist) * wdx + (dy / dist) * wdy;
+        if (align > 0.707) {
+          currentWindWarnings.push({
+            source, target, dist: dist.toFixed(1),
+            type: "Vapor Ingestion Risk"
+          });
+        }
+      }
+    }
+
+    function updateUI() {
+      const critCount = currentViolations.filter(v => v.severity === "CRITICAL").length;
+      const warnCount = currentViolations.filter(v => v.severity !== "CRITICAL").length;
+
+      document.getElementById('kpiUnits').textContent = equipmentList.length;
+      document.getElementById('kpiCrit').textContent = critCount;
+      document.getElementById('kpiWarn').textContent = warnCount;
+      document.getElementById('kpiWind').textContent = currentWindWarnings.length;
+      document.getElementById('hudUnitsCount').textContent = `${equipmentList.length} Units Placed`;
+
+      const tbody = document.getElementById('violationTableBody');
+      tbody.innerHTML = '';
+      currentViolations.forEach((v) => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = "pointer";
+        tr.onclick = () => showDetail(v);
+        tr.innerHTML = `
+          <td><b>${v.u1.tag}</b> ↔ <b>${v.u2.tag}</b><br><span style="color:#94a3b8; font-size:0.6rem;">${v.u1.category} | ${v.u2.category}</span></td>
+          <td>${v.actual}m</td>
+          <td>${v.required}m</td>
+          <td style="color:#f87171; font-weight:700;">-${v.deficit}m</td>
+          <td><span class="badge ${v.severity === 'CRITICAL' ? 'badge-crit' : 'badge-warn'}">${v.severity}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function showDetail(v) {
+      document.getElementById('selectedDetail').style.display = 'block';
+      document.getElementById('detTitle').textContent = `Non-Compliance: ${v.u1.tag} ↔ ${v.u2.tag}`;
+      document.getElementById('detDesc').textContent = v.rationale;
+      document.getElementById('detStd').textContent = `Governing Standard: ${v.stdRef} (Min Separation: ${v.required}m)`;
+    }
+
+    // Canvas Rendering
+    const canvas = document.getElementById('plotCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+      drawPlot();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function toScreen(x, y) {
+      const margin = 45;
+      const scaleX = (canvas.width - margin * 2) / mapDimension;
+      const scaleY = (canvas.height - margin * 2) / mapDimension;
+      const scale = Math.min(scaleX, scaleY);
+      return {
+        sx: margin + x * scale,
+        sy: canvas.height - margin - y * scale,
+        scale
+      };
+    }
+
+    function toWorld(sx, sy) {
+      const margin = 45;
+      const scaleX = (canvas.width - margin * 2) / mapDimension;
+      const scaleY = (canvas.height - margin * 2) / mapDimension;
+      const scale = Math.min(scaleX, scaleY);
+      return {
+        wx: (sx - margin) / scale,
+        wy: (canvas.height - margin - sy) / scale
+      };
+    }
+
+    function drawPlot() {
+      if (!canvas.width || !canvas.height) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const margin = 45;
+      const p0 = toScreen(0, 0);
+      const pMax = toScreen(mapDimension, mapDimension);
+      const plotWidth = pMax.sx - p0.sx;
+      const plotHeight = p0.sy - pMax.sy;
+
+      // 1. Draw Blueprint Background if available
+      if (backgroundImage) {
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.drawImage(backgroundImage, p0.sx, pMax.sy, plotWidth, plotHeight);
+        ctx.restore();
+      }
+
+      // 2. Grid lines
+      ctx.strokeStyle = backgroundImage ? 'rgba(51, 65, 85, 0.4)' : '#1e293b';
+      ctx.lineWidth = 1;
+      const step = mapDimension >= 300 ? 50 : 20;
+
+      for (let i = 0; i <= mapDimension; i += step) {
+        const p1 = toScreen(i, 0);
+        const p2 = toScreen(i, mapDimension);
+        ctx.beginPath();
+        ctx.moveTo(p1.sx, p1.sy);
+        ctx.lineTo(p2.sx, p2.sy);
+        ctx.stroke();
+
+        const p3 = toScreen(0, i);
+        const p4 = toScreen(mapDimension, i);
+        ctx.beginPath();
+        ctx.moveTo(p3.sx, p3.sy);
+        ctx.lineTo(p4.sx, p4.sy);
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '10px monospace';
+        ctx.fillText(i + 'm', p1.sx - 8, p1.sy + 15);
+      }
+
+      // 3. Wind Vector Indicator
+      const windRad = (windAngle * Math.PI) / 180;
+      const windX = Math.cos(windRad) * 35;
+      const windY = -Math.sin(windRad) * 35;
+      const cx = 55, cy = 55;
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + windX, cy + windY);
+      ctx.stroke();
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(cx + windX, cy + windY, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(`Wind ${windAngle}°`, cx - 25, cy + 50);
+
+      // 4. Draw Non-Compliance Alert Lines
+      currentViolations.forEach(v => {
+        const p1 = toScreen(v.u1.x, v.u1.y);
+        const p2 = toScreen(v.u2.x, v.u2.y);
+        const isCrit = v.severity === "CRITICAL";
+
+        ctx.strokeStyle = isCrit ? "#ef4444" : "#f59e0b";
+        ctx.lineWidth = isCrit ? 2.5 : 1.8;
+        ctx.setLineDash(isCrit ? [] : [5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(p1.sx, p1.sy);
+        ctx.lineTo(p2.sx, p2.sy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const midX = (p1.sx + p2.sx) / 2;
+        const midY = (p1.sy + p2.sy) / 2;
+        ctx.fillStyle = isCrit ? "#ef4444" : "#f59e0b";
+        ctx.beginPath();
+        ctx.roundRect(midX - 35, midY - 9, 70, 18, 4);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${v.actual}m < ${v.required}m`, midX, midY + 3);
+        ctx.textAlign = "start";
+      });
+
+      // 5. Draw Placed Equipment Nodes
+      equipmentList.forEach(u => {
+        const p = toScreen(u.x, u.y);
+        const meta = CATEGORIES[u.category] || { color: "#94a3b8", radius: 6, name: u.category };
+        const radiusVal = u.radius || meta.radius;
+        const sRadius = radiusVal * p.scale;
+        const isSelected = (u === selectedUnit);
+
+        // Hazard Buffer Circle
+        ctx.fillStyle = meta.color + "33";
+        ctx.strokeStyle = isSelected ? "#ffffff" : meta.color;
+        ctx.lineWidth = isSelected ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(p.sx, p.sy, sRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Center Pin
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(p.sx, p.sy, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Label Box
+        ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+        ctx.strokeStyle = isSelected ? "#38bdf8" : "#334155";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(p.sx - 48, p.sy + sRadius + 4, 96, 25, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#38bdf8";
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(u.tag, p.sx, p.sy + sRadius + 14);
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "8px sans-serif";
+        const shortName = meta.name.length > 16 ? meta.name.substring(0, 15) + '..' : meta.name;
+        ctx.fillText(shortName, p.sx, p.sy + sRadius + 24);
+        ctx.textAlign = "start";
+      });
+    }
+
+    // Canvas Click & Mouse Interactions
+    canvas.addEventListener('mousedown', e => {
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const world = toWorld(sx, sy);
+
+      // Placement mode
+      if (placingMode) {
+        const wx = Math.max(5, Math.min(mapDimension - 5, Math.round(world.wx)));
+        const wy = Math.max(5, Math.min(mapDimension - 5, Math.round(world.wy)));
+        const prefix = placingMode.category.substring(0, 2);
+        const newTag = `${prefix}-${Math.floor(100 + Math.random() * 900)}`;
+
+        const newUnit = {
+          tag: newTag,
+          category: placingMode.category,
+          x: wx,
+          y: wy,
+          z: 0,
+          radius: placingMode.radius
+        };
+
+        equipmentList.push(newUnit);
+        selectedUnit = newUnit;
+        cancelPlacing();
+        runAudit();
+        inspectUnit(newUnit);
+        return;
+      }
+
+      // Drag / select existing
+      for (let u of equipmentList) {
+        const dist = Math.hypot(u.x - world.wx, u.y - world.wy);
+        const r = u.radius || 6;
+        if (dist <= r + 4) {
+          draggedUnit = u;
+          selectedUnit = u;
+          inspectUnit(u);
+          canvas.style.cursor = 'grabbing';
+          drawPlot();
+          return;
+        }
+      }
+
+      selectedUnit = null;
+      document.getElementById('unitInspector').style.display = 'none';
+      drawPlot();
+    });
+
+    function inspectUnit(u) {
+      document.getElementById('unitInspector').style.display = 'flex';
+      document.getElementById('inspectName').textContent = `${u.tag} (${u.category})`;
+      document.getElementById('inspectCoords').textContent = `X: ${u.x}m, Y: ${u.y}m`;
+    }
+
+    window.addEventListener('mousemove', e => {
+      if (draggedUnit) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+        const world = toWorld(sx, sy);
+        draggedUnit.x = Math.max(5, Math.min(mapDimension - 5, Math.round(world.wx)));
+        draggedUnit.y = Math.max(5, Math.min(mapDimension - 5, Math.round(world.wy)));
+        inspectUnit(draggedUnit);
+        runAudit();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (draggedUnit) {
+        draggedUnit = null;
+        canvas.style.cursor = placingMode ? 'crosshair' : 'default';
+      }
+    });
+
+    function exportAnnotatedMap() {
+      const link = document.createElement('a');
+      link.download = `siting_audit_IPS_${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Initialize with sample CSV data and CAD blueprint
+    loadSampleCsv();
+    setTimeout(resizeCanvas, 50);
+  </script>
+</body>
+</html>

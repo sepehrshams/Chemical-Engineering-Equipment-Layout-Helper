@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chemical Plant Layout Safety Audit Report</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #eef2f5; padding: 30px; line-height: 1.6; color: #333; }
+.container { max-width: 1050px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+h1 { color: #0d47a1; border-bottom: 3px solid #1976d2; padding-bottom: 12px; margin-top: 0; }
+.badge { display: inline-block; padding: 4px 10px; border-radius: 4px; color: white; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+.crit { background: #d32f2f; }
+.warn { background: #f57c00; }
+table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+th, td { border: 1px solid #cfd8dc; padding: 10px; text-align: left; }
+th { background: #1565c0; color: white; font-weight: 600; }
+tr:nth-child(even) { background: #f8fafc; }
+.deficit { color: #c62828; font-weight: bold; }
+ul { line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🏭 Chemical Process Plant Layout & Safety Siting Audit Report</h1>
+<p><strong>Total Equipment Units Analyzed:</strong> 8</p>
+<p><strong>Prevailing Wind Direction:</strong> 45° (North-East)</p>
+<p><strong>Safety Deficiencies Identified:</strong> <span class="badge crit">11 Violations</span></p>
+
+<h3>Separation Distance Non-Compliance Matrix (CCPS / NFPA / API):</h3>
+<table>
+<tr>
+  <th>Unit A</th><th>Unit B</th><th>Actual Dist</th><th>Required Dist</th><th>Deficit</th><th>Severity</th><th>Standard Reference</th><th>Chemical Engineering Hazard Rationale</th>
+</tr>
+<tr>
+  <td><b>Cracking Furnace (Fired Heater)</b></td>
+  <td><b>LPG Bullet Storage Tank</b></td>
+  <td>3.6 m</td>
+  <td>35.0 m</td>
+  <td class="deficit">-31.4 m</td>
+  <td><span class="badge crit">CRITICAL</span></td>
+  <td>NFPA 30 Sec 22.4 & CCPS Facility Siting</td>
+  <td>Fired heaters are permanent ignition sources. A severe vapor cloud explosion (VCE) or boilover can occur if hydrocarbon vapors migrate from storage tanks.</td>
+</tr><tr>
+  <td><b>Cracking Furnace (Fired Heater)</b></td>
+  <td><b>Fire Water Pump House</b></td>
+  <td>2.8 m</td>
+  <td>30.0 m</td>
+  <td class="deficit">-27.2 m</td>
+  <td><span class="badge crit">CRITICAL</span></td>
+  <td>NFPA 20 Guidelines</td>
+  <td>Provides safe operational envelope for emergency response teams during heater fire isolation.</td>
+</tr><tr>
+  <td><b>Cracking Furnace (Fired Heater)</b></td>
+  <td><b>Hydrogen Compressor House</b></td>
+  <td>0.1 m</td>
+  <td>25.0 m</td>
+  <td class="deficit">-24.9 m</td>
+  <td><span class="badge crit">CRITICAL</span></td>
+  <td>API RP 500 / CCPS Layout</td>
+  <td>Compressor seals have elevated failure and leak rates. Hydrocarbon gas must remain outside the ignition boundary of open burner flames.</td>
+</tr><tr>
+  <td><b>LPG Bullet Storage Tank</b></td>
+  <td><b>Central Control Building</b></td>
+  <td>40.3 m</td>
+  <td>45.0 m</td>
+  <td class="deficit">-4.7 m</td>
+  <td><span class="badge warn">WARNING</span></td>
+  <td>NFPA 30 & CCPS Siting</td>
+  <td>Protects personnel and central communication hubs from tank overfill pool fires and radiant thermal envelopes.</td>
+</tr><tr>
+  <td><b>LPG Bullet Storage Tank</b></td>
+  <td><b>Emergency Flare Stack</b></td>
+  <td>50.8 m</td>
+  <td>80.0 m</td>
+  <td class="deficit">-29.2 m</td>
+  <td><span class="badge warn">HIGH</span></td>
+  <td>API 521 & NFPA 30</td>
+  <td>Prevents radiant overheating of atmospheric/pressurized tank shells, avoiding catastrophic BLEVE (Boiling Liquid Expanding Vapor Explosion).</td>
+</tr><tr>
+  <td><b>LPG Bullet Storage Tank</b></td>
+  <td><b>Fire Water Pump House</b></td>
+  <td>2.0 m</td>
+  <td>40.0 m</td>
+  <td class="deficit">-38.0 m</td>
+  <td><span class="badge crit">CRITICAL</span></td>
+  <td>NFPA 20 / NFPA 30</td>
+  <td>Guarantees that firefighting equipment remains operable and accessible during an adjacent tank fire incident.</td>
+</tr><tr>
+  <td><b>LPG Bullet Storage Tank</b></td>
+  <td><b>Fuel Truck Loading Gantry</b></td>
+  <td>24.7 m</td>
+  <td>25.0 m</td>
+  <td class="deficit">-0.3 m</td>
+  <td><span class="badge warn">WARNING</span></td>
+  <td>NFPA 30 Sec 28.3</td>
+  <td>Segregates high-traffic road tanker transfer operations from primary bulk hydrocarbon tankage.</td>
+</tr><tr>
+  <td><b>Hydrotreating Reactor</b></td>
+  <td><b>Central Control Building</b></td>
+  <td>4.0 m</td>
+  <td>30.0 m</td>
+  <td class="deficit">-26.0 m</td>
+  <td><span class="badge crit">CRITICAL</span></td>
+  <td>API RP 752 / OSHA PSM 1910.119</td>
+  <td>In the event of thermal runaway or pressure vessel rupture, the control room must remain outside the immediate blast overpressure destructive radius.</td>
+</tr><tr>
+  <td><b>Hydrotreating Reactor</b></td>
+  <td><b>Emergency Flare Stack</b></td>
+  <td>47.3 m</td>
+  <td>60.0 m</td>
+  <td class="deficit">-12.7 m</td>
+  <td><span class="badge warn">WARNING</span></td>
+  <td>API 521 Guidelines</td>
+  <td>Shields delicate process instrumentation, transmitters, and reactor relief assemblies from excessive radiant flux.</td>
+</tr><tr>
+  <td><b>Hydrotreating Reactor</b></td>
+  <td><b>Fire Water Pump House</b></td>
+  <td>23.4 m</td>
+  <td>35.0 m</td>
+  <td class="deficit">-11.6 m</td>
+  <td><span class="badge warn">HIGH</span></td>
+  <td>NFPA 20 & API 2001 (Fire Protection)</td>
+  <td>Fire water pumps must be positioned outside the primary blast and hazard zone to guarantee operational water pressure during an emergency.</td>
+</tr><tr>
+  <td><b>Central Control Building</b></td>
+  <td><b>Emergency Flare Stack</b></td>
+  <td>29.7 m</td>
+  <td>90.0 m</td>
+  <td class="deficit">-60.3 m</td>
+  <td><span class="badge crit">CRITICAL</span></td>
+  <td>API 521 (Radiation Limit: 1.58 kW/m²)</td>
+  <td>Limits thermal radiation during full emergency plant blowdown to safe levels for personnel escape and control room structure integrity.</td>
+</tr></table>
+<h3 style="margin-top:25px;">🌪️ Prevailing Wind Drift Impact:</h3>
+<ul><li><b style='color:#b71c1c;'>Control Room Infiltration Hazard:</b> Control room 'Central Control Building' is situated downwind from major hazard source 'Hydrotreating Reactor'. Toxic or flammable vapor dispersion poses a direct hazard to operational personnel.</li></ul>
+</div>
+</body>
+</html>
