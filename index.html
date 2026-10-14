@@ -83,15 +83,16 @@
 
   <!-- Top Action Toolbar -->
   <div class="toolbar">
+    <!-- Blueprint / Background Overlay Toggle -->
+    <button id="btnToggleBlueprint" class="tool-btn" onclick="toggleBlueprintOverlay()" style="border: 1px solid #38bdf8;" title="تغییر حالت نمایش فونداسیون‌ها و طرح‌های چاپی نقشه (دیدن یا ندیدن طرح چاپی زیرین)">
+      <span id="blueprintIcon">📐</span> <b id="blueprintLabel">Printed CAD Overlay: OFF</b>
+    </button>
+
     <!-- Map Upload -->
-    <label class="tool-btn" style="cursor: pointer;">
-      <span>🗺️</span> <b>Upload Blueprint Image</b>
+    <label class="tool-btn" style="cursor: pointer;" title="آپلود تصویر نقشه یا سایت پلان اختصاصی">
+      <span>🗺️</span> <b>Upload Map</b>
       <input type="file" id="mapUploadInput" accept="image/*" style="display:none;" onchange="handleMapUpload(event)">
     </label>
-
-    <button class="tool-btn" onclick="loadSampleBlueprint()">
-      <span>🏗️</span> Load Sample CAD Map
-    </button>
 
     <div class="tool-separator"></div>
 
@@ -379,6 +380,9 @@
     let selectedUnit = null;
     let placingMode = null;
     let backgroundImage = null;
+    let showBlueprintOverlay = false;
+    const preloadedBlueprint = new Image();
+    preloadedBlueprint.src = 'sample_refinery_blueprint.png';
 
     // Populate Equipment Palette
     const paletteGrid = document.getElementById('paletteGrid');
@@ -530,7 +534,6 @@
     function loadSampleCsv() {
       cancelPlacing();
       equipmentList = JSON.parse(JSON.stringify(defaultSampleNodes));
-      loadSampleBlueprint();
       runAudit();
     }
 
@@ -606,6 +609,8 @@
         const img = new Image();
         img.onload = function() {
           backgroundImage = img;
+          showBlueprintOverlay = true;
+          updateBlueprintToggleButton();
           drawPlot();
         };
         img.src = e.target.result;
@@ -613,19 +618,41 @@
       reader.readAsDataURL(file);
     }
 
+    function toggleBlueprintOverlay() {
+      showBlueprintOverlay = !showBlueprintOverlay;
+      if (showBlueprintOverlay && !backgroundImage) {
+        backgroundImage = preloadedBlueprint;
+      }
+      updateBlueprintToggleButton();
+      drawPlot();
+    }
+
+    function updateBlueprintToggleButton() {
+      const btn = document.getElementById('btnToggleBlueprint');
+      const icon = document.getElementById('blueprintIcon');
+      const label = document.getElementById('blueprintLabel');
+      if (!btn) return;
+      if (showBlueprintOverlay) {
+        btn.style.background = '#0284c7';
+        btn.style.borderColor = '#38bdf8';
+        btn.style.color = '#ffffff';
+        icon.textContent = '👁️';
+        label.textContent = 'Printed CAD Overlay: ON';
+      } else {
+        btn.style.background = '#1e293b';
+        btn.style.borderColor = '#334155';
+        btn.style.color = '#94a3b8';
+        icon.textContent = '📐';
+        label.textContent = 'Printed CAD Overlay: OFF';
+      }
+    }
+
     function loadSampleBlueprint() {
       cancelPlacing();
-      // 1. Populate the 10 industrial equipment nodes on their CAD foundations
       equipmentList = JSON.parse(JSON.stringify(defaultSampleNodes));
-      
-      // 2. Load the CAD blueprint background image
-      const img = new Image();
-      img.onload = function() {
-        backgroundImage = img;
-        drawPlot();
-      };
-      img.src = 'sample_refinery_blueprint.png';
-
+      backgroundImage = preloadedBlueprint;
+      showBlueprintOverlay = true;
+      updateBlueprintToggleButton();
       runAudit();
     }
 
@@ -817,7 +844,8 @@
 
     function drawPlot() {
       if (!canvas.width || !canvas.height) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#070d17';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const margin = 45;
       const p0 = toScreen(0, 0);
@@ -825,20 +853,38 @@
       const plotWidth = pMax.sx - p0.sx;
       const plotHeight = p0.sy - pMax.sy;
 
-      // 1. Draw Blueprint Background if available
-      if (backgroundImage) {
-        ctx.save();
-        ctx.globalAlpha = 0.6;
-        ctx.drawImage(backgroundImage, p0.sx, pMax.sy, plotWidth, plotHeight);
-        ctx.restore();
+      // 1. Fill entire usable equipment layout area with Deep CAD Blueprint Blue
+      ctx.fillStyle = '#05152b';
+      ctx.fillRect(p0.sx, pMax.sy, plotWidth, plotHeight);
+
+      // 2. High-precision CAD Blue Engineering Grid (چهارخونه آبی مهندسی سراسری)
+      const minorStep = mapDimension >= 400 ? 20 : (mapDimension >= 250 ? 10 : 5);
+      const majorStep = mapDimension >= 400 ? 50 : (mapDimension >= 250 ? 25 : 20);
+
+      // 2a. Minor Grid Lines (every 5m or 10m)
+      ctx.strokeStyle = '#0e2d57';
+      ctx.lineWidth = 0.7;
+      for (let i = 0; i <= mapDimension; i += minorStep) {
+        if (i % majorStep === 0) continue;
+        const p1 = toScreen(i, 0);
+        const p2 = toScreen(i, mapDimension);
+        ctx.beginPath();
+        ctx.moveTo(p1.sx, p1.sy);
+        ctx.lineTo(p2.sx, p2.sy);
+        ctx.stroke();
+
+        const p3 = toScreen(0, i);
+        const p4 = toScreen(mapDimension, i);
+        ctx.beginPath();
+        ctx.moveTo(p3.sx, p3.sy);
+        ctx.lineTo(p4.sx, p4.sy);
+        ctx.stroke();
       }
 
-      // 2. Grid lines
-      ctx.strokeStyle = backgroundImage ? 'rgba(51, 65, 85, 0.4)' : '#1e293b';
-      ctx.lineWidth = 1;
-      const step = mapDimension >= 300 ? 50 : 20;
-
-      for (let i = 0; i <= mapDimension; i += step) {
+      // 2b. Major Grid Lines (every 20m, 25m, or 50m)
+      ctx.strokeStyle = '#1d4ed8';
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i <= mapDimension; i += majorStep) {
         const p1 = toScreen(i, 0);
         const p2 = toScreen(i, mapDimension);
         ctx.beginPath();
@@ -853,9 +899,37 @@
         ctx.lineTo(p4.sx, p4.sy);
         ctx.stroke();
 
-        ctx.fillStyle = '#64748b';
-        ctx.font = '10px monospace';
-        ctx.fillText(i + 'm', p1.sx - 8, p1.sy + 15);
+        // Technical Coordinates on both X and Y Axes
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(i + 'm', p1.sx - 10, p1.sy + 15);
+        if (i > 0) {
+          ctx.fillText(i + 'm', p3.sx - 34, p3.sy + 4);
+        }
+      }
+
+      // 2c. Outer Usable Site Boundary Frame
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2.0;
+      ctx.strokeRect(p0.sx, pMax.sy, plotWidth, plotHeight);
+
+      // Corner CAD Registration Marks (+)
+      const markLen = 8;
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 1.5;
+      [[p0.sx, p0.sy], [pMax.sx, p0.sy], [p0.sx, pMax.sy], [pMax.sx, pMax.sy]].forEach(([cx, cy]) => {
+        ctx.beginPath();
+        ctx.moveTo(cx - markLen, cy); ctx.lineTo(cx + markLen, cy);
+        ctx.moveTo(cx, cy - markLen); ctx.lineTo(cx, cy + markLen);
+        ctx.stroke();
+      });
+
+      // 3. Draw Static Printed Blueprint / CAD Foundations if Toggled ON
+      if (showBlueprintOverlay && backgroundImage) {
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.drawImage(backgroundImage, p0.sx, pMax.sy, plotWidth, plotHeight);
+        ctx.restore();
       }
 
       // 3. Wind Vector Indicator
